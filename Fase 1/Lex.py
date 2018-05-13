@@ -51,7 +51,7 @@ def get_column(entrada, token):
 	return column
 
 def t_error(t):
-	print("Error: Caracter inesperado \"", t.value[0], "\" en la fila ", t.lexer.lineno, ", columna ", get_column(t.lexer.lexdata, t))
+	print("Error: Caracter inesperado \"" + t.value[0] + "\" en la fila " + str(t.lexer.lineno) + ", columna " + str(get_column(t.lexer.lexdata, t)))
 	t.lexer.skip(1)
 
 ############ Main ############ 
@@ -61,7 +61,7 @@ lexer = lex.lex()
 
 # Prueba
 
-programa = " with + 4as_a"
+programa = " with + ?as_a"
 
 lexer.input(programa)
 
