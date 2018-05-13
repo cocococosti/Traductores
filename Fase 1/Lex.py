@@ -13,15 +13,48 @@ import ply.lex as lex
 
 # Tokens
 tokens = [
+	'TkComa',
+	'TkPunto',
+	'TkDosPuntos',
+	'TkParAbre',
+	'TkParCierra',
+	'TkCorcheteAbre',
+	'TkCorcheteCierra',
+	'TkLlaveAbre',
+	'TkLlaveCierra',
+	'TkHacer',
+	'TkAsignacion',
 	'TkSuma',
 	'TkResta',
-	'TkId'
+	'TkConjuncion',
+	'TkId',
+	'TkNum',
+	'TkError'
 ]
 
 
 # Palabras reservadas
 reservadas = {
 	'with': 'TkWith',
+	'begin': 'TkBegin',
+	'var': 'TkVar',
+	'int': 'TkInt',
+	'bool': 'TkBool',
+	'char': 'TkChar',
+	'array': 'TkArray',
+	'of': 'TkOf',
+	'true': 'TkTrue',
+	'false': 'TkFalse',
+	'if': 'TkIf',
+	'otherwise': 'TkOtherwise',
+	'while': 'TkWhile',
+	'for': 'TkFor',
+	'from': 'TkFrom',
+	'to': 'TkTo',
+	'step': 'TkStep',
+	'read': 'TkRead',
+	'print': 'TkPrint',
+	'not': 'TkNot',
 	'end': 'TkEnd'
 }
 
@@ -31,11 +64,50 @@ tokens = tokens + list(reservadas.values())
 t_ignore = ' \t'
 
 # Expresiones regulares
-t_TkSuma = r'\+' 
+
+t_TkComa = r'\,'
+t_TkPunto = r'\.'
+t_TkDosPuntos = r'\:'
+t_TkParAbre = r'\('
+t_TkParCierra = r'\)'
+t_TkCorcheteAbre = r'\['
+t_TkCorcheteCierra = r'\]'
+t_TkLlaveAbre = r'\{'
+t_TkLlaveCierra = r'\}'
+t_TkHacer = r'\->'
+t_TkAsignacion = r'\<-'
+
+t_TkSuma = r'\+'
+
+t_TkResta = r'\-' 
+
+t_TkConjuncion = r'\\/'
+
+
+def t_newline(t):
+	r'\n+'
+	t.lexer.lineno += len(t.value)
+
+def t_TkError(t):
+	r'[0-9][a-zA-Z_][a-zA-Z_0-9]*'
+	t.value = t.value[0]
+	t.lexer.error = True
+	t.type = 'TkError'
+	return t
+
+def t_error(t):
+	print("Error: Caracter inesperado \"" + t.value[0] + "\" en la fila " + str(t.lexer.lineno) + ", columna " + str(get_column(t.lexer.lexdata, t)))
+	t.lexer.error = True
+	t.lexer.skip(1)
 
 def t_ID(t):
 	r'[a-zA-Z_][a-zA-Z_0-9]*'
 	t.type = reservadas.get(t.value, 'TkId')
+	return t
+
+def t_TkNum(t):
+	r'\d+'
+	t.value = int(t.value)
 	return t
 
 def get_column(entrada, token):
@@ -50,27 +122,78 @@ def get_column(entrada, token):
 	column = (token.lexpos - inicio) + 1
 	return column
 
-def t_error(t):
-	print("Error: Caracter inesperado \"" + t.value[0] + "\" en la fila " + str(t.lexer.lineno) + ", columna " + str(get_column(t.lexer.lexdata, t)))
-	t.lexer.skip(1)
 
 ############ Main ############ 
 
 # Construimos el lexer
 lexer = lex.lex()
+lexer.error = False
 
 # Prueba
 
-programa = " with + ?as_a"
+programa = '''
+with + as_a \/
+hola
+if2
+if
+?
+'''
 
-lexer.input(programa)
+otro = '''
+with
+	var contador : int
 
-# Extraer tokens
 
-while True:
-	tok = lexer.token()
+begin
+	contador <- 35 .
 
-	if not tok:
-		break
 
-	print(tok)
+end
+'''
+
+lexer.input(otro)
+contador = 0
+for tok in lexer:
+	contador += 1
+	pass
+
+lexer.lexpos = 0
+lexer.lineno = 0
+lines = {}
+n = 0
+if (lexer.error):
+	for tok in lexer:
+		if tok.type == 'TkError':
+			print("Error: Caracter inesperado \"" + tok.value + "\" en la fila " + str(lexer.lineno) + ", columna " + str(get_column(lexer.lexdata, tok)))
+else:
+	for tok in lexer:
+
+		if (str(tok.lineno) in lines):
+			if (tok.type == 'TkId'):
+				lines[str(tok.lineno)].append(tok.type + "(\"" + tok.value + "\") " + str(tok.lineno) + " " + str(get_column(lexer.lexdata, tok)))
+			else:
+				lines[str(tok.lineno)].append(tok.type + " " + str(tok.lineno) + " " + str(get_column(lexer.lexdata, tok)))
+		else:
+			if (tok.type == 'TkId'):
+				lines[str(tok.lineno)] = [tok.type + "(\"" + tok.value + "\") " + str(tok.lineno) + " " + str(get_column(lexer.lexdata, tok))]
+			else:
+				lines[str(tok.lineno)] = [tok.type + " " + str(tok.lineno) + " " + str(get_column(lexer.lexdata, tok))]
+	
+	for val in range(1,lexer.lineno):
+		i = 0
+		if str(val) in lines:
+			for j in lines[str(val)]:
+				if (i == len(lines[str(val)])-1):
+					print(j)
+				else:
+					print(j + ", ", end = '')
+				i = i + 1
+
+'''
+FALTA
+- que pasa si encuentra un numero negativo: lo lee como numero, o como TkResta y TkNum?
+- matchear error cuando aparece un solo caracter invalido, por ejemplo una linea con un solo ?
+- palabras resrvadas sensibles a mayusculas?
+- preguntar sobre inconsistencia en el conteo de las lineas del ejemplo.
+- preguntar cuantas columnas ocupa el tab? si es un solo caracter no deberia ocupar una sola col?
+'''
