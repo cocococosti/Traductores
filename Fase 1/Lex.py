@@ -76,11 +76,8 @@ t_TkLlaveAbre = r'\{'
 t_TkLlaveCierra = r'\}'
 t_TkHacer = r'\->'
 t_TkAsignacion = r'\<-'
-
 t_TkSuma = r'\+'
-
 t_TkResta = r'\-' 
-
 t_TkConjuncion = r'\\/'
 
 
