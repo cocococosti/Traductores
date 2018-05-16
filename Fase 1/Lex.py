@@ -10,6 +10,7 @@ Fecha:
 """
 
 import ply.lex as lex
+from sys import argv
 
 # Tokens
 tokens = [
@@ -26,10 +27,24 @@ tokens = [
 	'TkAsignacion',
 	'TkSuma',
 	'TkResta',
+	'TkMult',
+	'TkDiv',
 	'TkConjuncion',
+	'TkDisyuncion',
+	'TkMenor',
+	'TkMenorIgual',
+	'TkMayor',
+	'TkMayorIgual',
+	'TkIgual',
+	'TkSiguienteCar',
+	'TkAnteriorCar',
+	'TkValorAscii',
+	'TkConcatenacion',
+	'TkShift',
 	'TkId',
 	'TkNum',
-	'TkError'
+	'TkError',
+	'TkErrorSol'
 ]
 
 
@@ -77,25 +92,47 @@ t_TkLlaveCierra = r'\}'
 t_TkHacer = r'\->'
 t_TkAsignacion = r'\<-'
 t_TkSuma = r'\+'
-t_TkResta = r'\-' 
-t_TkConjuncion = r'\\/'
-
+t_TkResta = r'\-'
+t_TkMult = r'\*'
+t_TkDiv = r'\/'
+t_TkConjuncion = r'\/\\' 
+t_TkDisyuncion = r'\\/'
+t_TkMenor = r'\<'
+t_TkMenorIgual = r'\<='
+t_TkMayor = r'\>'
+t_TkMayorIgual = r'\>='
+t_TkIgual = r'\='
+#DESIGUAL
+t_TkSiguienteCar = r'[+][+]'
+t_TkAnteriorCar = r'[-][-]'
+t_TkValorAscii = r'\#'
+t_TkConcatenacion = r'[:][:]'
+t_TkShift = r'\$'
+t_TkErrorSol = r'.'
 
 def t_newline(t):
 	r'\n+'
 	t.lexer.lineno += len(t.value)
 
 def t_TkError(t):
-	r'[0-9][a-zA-Z_][a-zA-Z_0-9]*'
+	r'[^a-zA-Z_0-9<+()[]][0-9]*[a-zA-Z_][a-zA-Z_0-9]*'
 	t.value = t.value[0]
 	t.lexer.error = True
 	t.type = 'TkError'
 	return t
 
+
+	
+
 def t_error(t):
-	print("Error: Caracter inesperado \"" + t.value[0] + "\" en la fila " + str(t.lexer.lineno) + ", columna " + str(get_column(t.lexer.lexdata, t)))
-	t.lexer.error = True
+	#print("Error: Caracter inesperado \"" + t.value[0] + "\" en la fila " + str(t.lexer.lineno) + ", columna " + str(get_column(t.lexer.lexdata, t)))
+	#t.lexer.error = True
 	t.lexer.skip(1)
+
+def t_TkChar(t):
+	r'[\']([\n]{1}|[\t]{1}|[\']{1}|[\\t]{1}|[\\]{1}|.{1})[\']'
+	t.type = 'TkChar'
+	return t
 
 def t_ID(t):
 	r'[a-zA-Z_][a-zA-Z_0-9]*'
@@ -106,6 +143,7 @@ def t_TkNum(t):
 	r'\d+'
 	t.value = int(t.value)
 	return t
+
 
 def get_column(entrada, token):
 	# El atributo lexpos es un entero que contiene la posicion actual en el texto de
@@ -120,6 +158,8 @@ def get_column(entrada, token):
 	return column
 
 
+
+
 ############ Main ############ 
 
 # Construimos el lexer
@@ -129,17 +169,20 @@ lexer.error = False
 # Prueba
 
 programa = '''
-with + as_a \/
+with + as_a 2\/
++
 hola
-if2
 if
-?
+if
 '''
 
 otro = '''
 with
-	var contador : int
-
+	var (ifHola : int
+	+
+	++++
+	7hola
+	'ad'
 
 begin
 	contador <- 35 .
@@ -148,19 +191,30 @@ begin
 end
 '''
 
+filename = argv[1]
+
+program = ""
+
+with open(filename, 'r') as fd:
+	for line in fd:
+		program = program + line
+
+
 lexer.input(otro)
 contador = 0
+error = False
 for tok in lexer:
-	contador += 1
+	if tok.type == 'TkError' or tok.type == 'TkErrorSol':
+		error = True
 	pass
 
 lexer.lexpos = 0
 lexer.lineno = 0
-lines = {}
+lines = {} 
 n = 0
-if (lexer.error):
+if (error):
 	for tok in lexer:
-		if tok.type == 'TkError':
+		if tok.type == 'TkError' or tok.type == 'TkErrorSol':
 			print("Error: Caracter inesperado \"" + tok.value + "\" en la fila " + str(lexer.lineno) + ", columna " + str(get_column(lexer.lexdata, tok)))
 else:
 	for tok in lexer:
