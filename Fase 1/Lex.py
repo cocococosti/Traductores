@@ -16,6 +16,7 @@ from sys import argv
 tokens = [
 	'TkComa',
 	'TkPunto',
+	'TkPuntoYComa',
 	'TkDosPuntos',
 	'TkParAbre',
 	'TkParCierra',
@@ -29,6 +30,7 @@ tokens = [
 	'TkResta',
 	'TkMult',
 	'TkDiv',
+	'TkMod',
 	'TkConjuncion',
 	'TkDisyuncion',
 	'TkMenor',
@@ -36,6 +38,7 @@ tokens = [
 	'TkMayor',
 	'TkMayorIgual',
 	'TkIgual',
+	'TkDesigual',
 	'TkSiguienteCar',
 	'TkAnteriorCar',
 	'TkValorAscii',
@@ -44,9 +47,10 @@ tokens = [
 	'TkId',
 	'TkNum',
 	'TkError',
-	'TkErrorSol'
+	'TkErrorSol',
+	'TkCaracterError',
+	'TkCarEspecial'
 ]
-
 
 # Palabras reservadas
 reservadas = {
@@ -55,7 +59,7 @@ reservadas = {
 	'var': 'TkVar',
 	'int': 'TkInt',
 	'bool': 'TkBool',
-	'char': 'TkChar',
+	'char': 'TkCaracter',
 	'array': 'TkArray',
 	'of': 'TkOf',
 	'true': 'TkTrue',
@@ -78,9 +82,19 @@ tokens = tokens + list(reservadas.values())
 # Ignorar espacios y tabuladores
 t_ignore = ' \t'
 
-# Expresiones regulares
-
+# Expresiones regulares ordenadas de forma decreciente
+t_TkConcatenacion = r'[:][:]'
+t_TkDesigual = r'[/][=]'
+t_TkSiguienteCar = r'[+][+]'
+t_TkAnteriorCar = r'[-][-]'
+t_TkConjuncion = r'\/\\'
+t_TkDisyuncion = r'\\/'
+t_TkMayorIgual = r'\>='
+t_TkMenorIgual = r'\<='
+t_TkHacer = r'\->'
+t_TkAsignacion = r'\<-'
 t_TkComa = r'\,'
+t_TkPuntoYComa = r'\;'
 t_TkPunto = r'\.'
 t_TkDosPuntos = r'\:'
 t_TkParAbre = r'\('
@@ -89,62 +103,70 @@ t_TkCorcheteAbre = r'\['
 t_TkCorcheteCierra = r'\]'
 t_TkLlaveAbre = r'\{'
 t_TkLlaveCierra = r'\}'
-t_TkHacer = r'\->'
-t_TkAsignacion = r'\<-'
 t_TkSuma = r'\+'
 t_TkResta = r'\-'
 t_TkMult = r'\*'
 t_TkDiv = r'\/'
-t_TkConjuncion = r'\/\\' 
-t_TkDisyuncion = r'\\/'
+t_TkMod = r'\%'
 t_TkMenor = r'\<'
-t_TkMenorIgual = r'\<='
 t_TkMayor = r'\>'
-t_TkMayorIgual = r'\>='
 t_TkIgual = r'\='
-#DESIGUAL
-t_TkSiguienteCar = r'[+][+]'
-t_TkAnteriorCar = r'[-][-]'
 t_TkValorAscii = r'\#'
-t_TkConcatenacion = r'[:][:]'
 t_TkShift = r'\$'
 t_TkErrorSol = r'.'
 
+#Expresiones regulares especificadas como funciones
+
+# Actualizar numero de lineas cada vez que se encuentra un salto
 def t_newline(t):
 	r'\n+'
 	t.lexer.lineno += len(t.value)
 
+# Para detectar un Id erroneo
 def t_TkError(t):
 	r'[^a-zA-Z_0-9<+()[]][0-9]*[a-zA-Z_][a-zA-Z_0-9]*'
 	t.value = t.value[0]
-	t.lexer.error = True
 	t.type = 'TkError'
 	return t
 
 
-	
-
+# Cualquier otro tipo de error
 def t_error(t):
-	#print("Error: Caracter inesperado \"" + t.value[0] + "\" en la fila " + str(t.lexer.lineno) + ", columna " + str(get_column(t.lexer.lexdata, t)))
-	#t.lexer.error = True
 	t.lexer.skip(1)
 
-def t_TkChar(t):
-	r'[\']([\n]{1}|[\t]{1}|[\']{1}|[\\t]{1}|[\\]{1}|.{1})[\']'
-	t.type = 'TkChar'
+# Para detectar caracteres (incluyendo los especiales)
+def t_TkCaracter(t):
+	r'[\'](\\n|\\t|\\\'|\\\\|.{1})[\']'
+	t.type = 'TkCaracter'
 	return t
 
+# Para detectar un char especial seguido de un error
+def t_TkCarEspecial(t):
+	r'[\'](\\n.|\\t.|\\\'.|\\\\.)[\']'
+	t.value = t.value[3]
+	t.type = 'TkCaracterError'
+	return t
+
+# Para detectar un char erroneo(largo mayor de 1)
+def t_TkCaracterError(t):
+	r'[\'].{2,}[\']'
+	t.value = t.value[2]
+	t.type = 'TkCaracterError'
+	return t
+
+#Expresion regular que maneja las palabras reservadas.
 def t_ID(t):
 	r'[a-zA-Z_][a-zA-Z_0-9]*'
 	t.type = reservadas.get(t.value, 'TkId')
 	return t
 
+# Para detectar numeros
 def t_TkNum(t):
 	r'\d+'
 	t.value = int(t.value)
 	return t
 
-
+# Para obtener el numero de columna de un token
 def get_column(entrada, token):
 	# El atributo lexpos es un entero que contiene la posicion actual en el texto de
 	# entrada (justo despues del ultimo texto matcheado)
@@ -157,94 +179,98 @@ def get_column(entrada, token):
 	column = (token.lexpos - inicio) + 1
 	return column
 
-
-
-
-############ Main ############ 
+############ Main ############
 
 # Construimos el lexer
 lexer = lex.lex()
-lexer.error = False
 
-# Prueba
-
-programa = '''
-with + as_a 2\/
-+
-hola
-if
-if
-'''
-
-otro = '''
-with
-	var (ifHola : int
-	+
-	++++
-	7hola
-	'ad'
-
-begin
-	contador <- 35 .
-
-
-end
-'''
-
+# Leer nombre del archivo de la entrada estandar
 filename = argv[1]
 
+# String con todas las lineas del archivo
 program = ""
 
+# Numero total de lienas en el archivo
+n = 0
+
 with open(filename, 'r') as fd:
+
 	for line in fd:
 		program = program + line
+		n = n + 1
 
 
-lexer.input(otro)
-contador = 0
+# Pasamos programa al lexer
+lexer.input(program)
+
+# Booleano para chequear si ocurrio un error
 error = False
-for tok in lexer:
-	if tok.type == 'TkError' or tok.type == 'TkErrorSol':
-		error = True
-	pass
 
+# Recorremos los tokens para ver si ocurre un error
+for tok in lexer:
+	if tok.type == 'TkError' or tok.type == 'TkErrorSol' or tok.type == 'TkCaracterError':
+		# Si se encuentra un token error cambiamos el estatus de error
+		error = True
+		break
+
+# Reiniciamos posiciones del lexer
 lexer.lexpos = 0
 lexer.lineno = 0
-lines = {} 
-n = 0
-if (error):
-	for tok in lexer:
-		if tok.type == 'TkError' or tok.type == 'TkErrorSol':
-			print("Error: Caracter inesperado \"" + tok.value + "\" en la fila " + str(lexer.lineno) + ", columna " + str(get_column(lexer.lexdata, tok)))
-else:
-	for tok in lexer:
 
-		if (str(tok.lineno) in lines):
-			if (tok.type == 'TkId'):
-				lines[str(tok.lineno)].append(tok.type + "(\"" + tok.value + "\") " + str(tok.lineno) + " " + str(get_column(lexer.lexdata, tok)))
+# Diccionario de los token, las llaves son los numeros de las filas
+# Para cada fila hay un arreglo, donde cada elemento es un string que representa
+# un token de la linea
+lines = {}
+
+# Si se encontro un token error, solo imprimimos los errores
+if (error):
+
+	for tok in lexer:
+		if tok.type == 'TkError' or tok.type == 'TkErrorSol' or tok.type == 'TkCaracterError':
+			print("Error: Caracter inesperado \"" + tok.value + "\" en la fila " + str(lexer.lineno+1) + ", columna " + str(get_column(lexer.lexdata, tok)))
+
+# Si no ocurrio un error, añadimos los tokens al diccionario 
+else:
+
+	for tok in lexer:
+		# Numero del fila
+		col = str(tok.lineno+1)
+		# Si el numero de la fila ya esta en el diccionario, añadimos el token a la lista
+		if (col in lines):
+			# Cada string que representa un token tiene un formato distinto
+			if (tok.type == 'TkId' ):
+				lines[col].append(tok.type + "(\"" + tok.value + "\") " + col + " " + str(get_column(lexer.lexdata, tok)))
+			elif (tok.type == 'TkCaracter'):
+				lines[col].append(tok.type + "(" + tok.value + ") " + col + " " + str(get_column(lexer.lexdata, tok)))
+			elif (tok.type == 'TkNum'):
+				lines[col].append(tok.type + "(" + str(tok.value) + ") " + col + " " + str(get_column(lexer.lexdata, tok)))
+
 			else:
-				lines[str(tok.lineno)].append(tok.type + " " + str(tok.lineno) + " " + str(get_column(lexer.lexdata, tok)))
+				lines[col].append(tok.type + " " + col + " " + str(get_column(lexer.lexdata, tok)))
+		# Si el numero que representa la fila no esta en el dict, creamos su arreglo
 		else:
 			if (tok.type == 'TkId'):
-				lines[str(tok.lineno)] = [tok.type + "(\"" + tok.value + "\") " + str(tok.lineno) + " " + str(get_column(lexer.lexdata, tok))]
+				lines[col] = [tok.type + "(\"" + tok.value + "\") " + col + " " + str(get_column(lexer.lexdata, tok))]
+			elif (tok.type == 'TkCaracter'):
+				lines[col] = [tok.type + "(" + tok.value + ") " + col + " " + str(get_column(lexer.lexdata, tok))]
+			elif (tok.type == 'TkNum'):
+				lines[col] = [tok.type + "(" + str(tok.value) + ") " + col + " " + str(get_column(lexer.lexdata, tok))]
 			else:
-				lines[str(tok.lineno)] = [tok.type + " " + str(tok.lineno) + " " + str(get_column(lexer.lexdata, tok))]
+				lines[col] = [tok.type + " " + col + " " + str(get_column(lexer.lexdata, tok))]
 	
-	for val in range(1,lexer.lineno):
+	# Recorremos las llaves (numero de lineas) del diccionario en orden ascendente
+	for val in range(1,n+1):
+		# Contador para chequear si hemos llegado al final de una linea
 		i = 0
+		# Si el numero de la linea esta en el diccionario (contiene tokens)
 		if str(val) in lines:
+			# Imprimimos todos los tokens de la linea
 			for j in lines[str(val)]:
+				# Si llegamos a la ultima columna de la linea imprimos sin coma
 				if (i == len(lines[str(val)])-1):
 					print(j)
+
 				else:
 					print(j + ", ", end = '')
+				# Aumentar contador
 				i = i + 1
-
-'''
-FALTA
-- que pasa si encuentra un numero negativo: lo lee como numero, o como TkResta y TkNum?
-- matchear error cuando aparece un solo caracter invalido, por ejemplo una linea con un solo ?
-- palabras resrvadas sensibles a mayusculas?
-- preguntar sobre inconsistencia en el conteo de las lineas del ejemplo.
-- preguntar cuantas columnas ocupa el tab? si es un solo caracter no deberia ocupar una sola col?
-'''
