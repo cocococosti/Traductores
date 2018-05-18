@@ -49,8 +49,7 @@ tokens = [
 	'TkError',
 	'TkErrorSol',
 	'TkCaracterError',
-	'TkCarEspecial',
-	'TkCarError'
+	'TkCarEspecial'
 ]
 
 # Palabras reservadas
@@ -137,14 +136,8 @@ def t_error(t):
 
 # Para detectar caracteres (incluyendo los especiales)
 def t_TkCaracter(t):
-	r'[\'](\\n|\\t|\\\'|\\\\|[^\'\\]{1})[\']'
+	r'[\'](\\n|\\t|\\\'|\\\\|.{1})[\']'
 	t.type = 'TkCaracter'
-	return t
-
-def t_TkCarError(t):
-	r'[\'](\'|\\){1}[\']'
-	t.value = t.value[1]
-	t.type = 'TkCaracterError'
 	return t
 
 # Para detectar un char especial seguido de un error
@@ -153,7 +146,6 @@ def t_TkCarEspecial(t):
 	t.value = t.value[3]
 	t.type = 'TkCaracterError'
 	return t
-	
 
 # Para detectar un char erroneo(largo mayor de 1)
 def t_TkCaracterError(t):
