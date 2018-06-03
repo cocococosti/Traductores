@@ -211,93 +211,93 @@ def get_column(entrada, token):
 # Construimos el lexer
 lexer = lex.lex()
 
-# Leer nombre del archivo de la entrada estandar
-filename = argv[1]
+# # Leer nombre del archivo de la entrada estandar
+# filename = argv[1]
 
-# String con todas las lineas del archivo
-program = ""
+# # String con todas las lineas del archivo
+# program = ""
 
-# Numero total de lienas en el archivo
-n = 0
+# # Numero total de lienas en el archivo
+# n = 0
 
-with open(filename, 'r') as fd:
+# with open(filename, 'r') as fd:
 
-	for line in fd:
-		program = program + line
-		n = n + 1
+# 	for line in fd:
+# 		program = program + line
+# 		n = n + 1
 
 
-# Pasamos programa al lexer
-lexer.input(program)
+# # Pasamos programa al lexer
+# lexer.input(program)
 
-# Booleano para chequear si ocurrio un error
-error = False
+# # Booleano para chequear si ocurrio un error
+# error = False
 
-# Recorremos los tokens para ver si ocurre un error
-for tok in lexer:
-	if tok.type == 'TkError' or tok.type == 'TkErrorSol' or tok.type == 'TkCaracterError':
-		# Si se encuentra un token error cambiamos el estatus de error
-		error = True
-		break
+# # Recorremos los tokens para ver si ocurre un error
+# for tok in lexer:
+# 	if tok.type == 'TkError' or tok.type == 'TkErrorSol' or tok.type == 'TkCaracterError':
+# 		# Si se encuentra un token error cambiamos el estatus de error
+# 		error = True
+# 		break
 
-# Reiniciamos posiciones del lexer
-lexer.lexpos = 0
-lexer.lineno = 0
+# # Reiniciamos posiciones del lexer
+# lexer.lexpos = 0
+# lexer.lineno = 0
 
-# Diccionario de los token, las llaves son los numeros de las filas
-# Para cada fila hay un arreglo, donde cada elemento es un string que representa
-# un token de la linea
-lines = {}
+# # Diccionario de los token, las llaves son los numeros de las filas
+# # Para cada fila hay un arreglo, donde cada elemento es un string que representa
+# # un token de la linea
+# lines = {}
 
-# Si se encontro un token error, solo imprimimos los errores
-if (error):
+# # Si se encontro un token error, solo imprimimos los errores
+# if (error):
 
-	for tok in lexer:
-		if tok.type == 'TkError' or tok.type == 'TkErrorSol' or tok.type == 'TkCaracterError':
-			print("Error: Caracter inesperado \"" + tok.value + "\" en la fila " + str(lexer.lineno+1) + ", columna " + str(get_column(lexer.lexdata, tok)))
+# 	for tok in lexer:
+# 		if tok.type == 'TkError' or tok.type == 'TkErrorSol' or tok.type == 'TkCaracterError':
+# 			print("Error: Caracter inesperado \"" + tok.value + "\" en la fila " + str(lexer.lineno+1) + ", columna " + str(get_column(lexer.lexdata, tok)))
 
-# Si no ocurrio un error, añadimos los tokens al diccionario 
-else:
+# # Si no ocurrio un error, añadimos los tokens al diccionario 
+# else:
 
-	for tok in lexer:
-		# Numero del fila
-		col = str(tok.lineno+1)
-		# Si el numero de la fila ya esta en el diccionario, añadimos el token a la lista
-		if (col in lines):
-			# Cada string que representa un token tiene un formato distinto
-			if (tok.type == 'TkId' ):
-				lines[col].append(tok.type + "(\"" + tok.value + "\") " + col + " " + str(get_column(lexer.lexdata, tok)))
-			elif (tok.type == 'TkCaracter' or tok.type == 'TkTab' or tok.type == 'TkSalto' or tok.type == 'TkBarra' or tok.type == 'TkComilla'):
-				lines[col].append(tok.type + "(" + tok.value + ") " + col + " " + str(get_column(lexer.lexdata, tok)))
-			elif (tok.type == 'TkNum'):
-				lines[col].append(tok.type + "(" + str(tok.value) + ") " + col + " " + str(get_column(lexer.lexdata, tok)))
+# 	for tok in lexer:
+# 		# Numero del fila
+# 		col = str(tok.lineno+1)
+# 		# Si el numero de la fila ya esta en el diccionario, añadimos el token a la lista
+# 		if (col in lines):
+# 			# Cada string que representa un token tiene un formato distinto
+# 			if (tok.type == 'TkId' ):
+# 				lines[col].append(tok.type + "(\"" + tok.value + "\") " + col + " " + str(get_column(lexer.lexdata, tok)))
+# 			elif (tok.type == 'TkCaracter' or tok.type == 'TkTab' or tok.type == 'TkSalto' or tok.type == 'TkBarra' or tok.type == 'TkComilla'):
+# 				lines[col].append(tok.type + "(" + tok.value + ") " + col + " " + str(get_column(lexer.lexdata, tok)))
+# 			elif (tok.type == 'TkNum'):
+# 				lines[col].append(tok.type + "(" + str(tok.value) + ") " + col + " " + str(get_column(lexer.lexdata, tok)))
 
-			else:
-				lines[col].append(tok.type + " " + col + " " + str(get_column(lexer.lexdata, tok)))
-		# Si el numero que representa la fila no esta en el dict, creamos su arreglo
-		else:
-			if (tok.type == 'TkId'):
-				lines[col] = [tok.type + "(\"" + tok.value + "\") " + col + " " + str(get_column(lexer.lexdata, tok))]
-			elif (tok.type == 'TkCaracter' or tok.type == 'TkTab' or tok.type == 'TkSalto' or tok.type == 'TkBarra' or tok.type == 'TkComilla'):
-				lines[col] = [tok.type + "(" + tok.value + ") " + col + " " + str(get_column(lexer.lexdata, tok))]
-			elif (tok.type == 'TkNum'):
-				lines[col] = [tok.type + "(" + str(tok.value) + ") " + col + " " + str(get_column(lexer.lexdata, tok))]
-			else:
-				lines[col] = [tok.type + " " + col + " " + str(get_column(lexer.lexdata, tok))]
+# 			else:
+# 				lines[col].append(tok.type + " " + col + " " + str(get_column(lexer.lexdata, tok)))
+# 		# Si el numero que representa la fila no esta en el dict, creamos su arreglo
+# 		else:
+# 			if (tok.type == 'TkId'):
+# 				lines[col] = [tok.type + "(\"" + tok.value + "\") " + col + " " + str(get_column(lexer.lexdata, tok))]
+# 			elif (tok.type == 'TkCaracter' or tok.type == 'TkTab' or tok.type == 'TkSalto' or tok.type == 'TkBarra' or tok.type == 'TkComilla'):
+# 				lines[col] = [tok.type + "(" + tok.value + ") " + col + " " + str(get_column(lexer.lexdata, tok))]
+# 			elif (tok.type == 'TkNum'):
+# 				lines[col] = [tok.type + "(" + str(tok.value) + ") " + col + " " + str(get_column(lexer.lexdata, tok))]
+# 			else:
+# 				lines[col] = [tok.type + " " + col + " " + str(get_column(lexer.lexdata, tok))]
 	
-	# Recorremos las llaves (numero de lineas) del diccionario en orden ascendente
-	for val in range(1,n+1):
-		# Contador para chequear si hemos llegado al final de una linea
-		i = 0
-		# Si el numero de la linea esta en el diccionario (contiene tokens)
-		if str(val) in lines:
-			# Imprimimos todos los tokens de la linea
-			for j in lines[str(val)]:
-				# Si llegamos a la ultima columna de la linea imprimos sin coma
-				if (i == len(lines[str(val)])-1):
-					print(j)
+# 	# Recorremos las llaves (numero de lineas) del diccionario en orden ascendente
+# 	for val in range(1,n+1):
+# 		# Contador para chequear si hemos llegado al final de una linea
+# 		i = 0
+# 		# Si el numero de la linea esta en el diccionario (contiene tokens)
+# 		if str(val) in lines:
+# 			# Imprimimos todos los tokens de la linea
+# 			for j in lines[str(val)]:
+# 				# Si llegamos a la ultima columna de la linea imprimos sin coma
+# 				if (i == len(lines[str(val)])-1):
+# 					print(j)
 
-				else:
-					print(j + ", ", end = '')
-				# Aumentar contador
-				i = i + 1
+# 				else:
+# 					print(j + ", ", end = '')
+# 				# Aumentar contador
+# 				i = i + 1
