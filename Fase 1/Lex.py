@@ -50,7 +50,11 @@ tokens = [
 	'TkErrorSol',
 	'TkCaracterError',
 	'TkCarEspecial',
-	'TkCarError'
+	'TkCarError',
+	'TkTab',
+	'TkSalto',
+	'TkComilla',
+	'TkBarra'
 ]
 
 # Palabras reservadas
@@ -123,12 +127,7 @@ def t_newline(t):
 	r'\n+'
 	t.lexer.lineno += len(t.value)
 
-# Para detectar un Id erroneo
-def t_TkError(t):
-	r'[^a-zA-Z_0-9<+()[]][0-9]*[a-zA-Z_][a-zA-Z_0-9]*'
-	t.value = t.value[0]
-	t.type = 'TkError'
-	return t
+
 
 
 # Cualquier otro tipo de error
@@ -137,8 +136,28 @@ def t_error(t):
 
 # Para detectar caracteres (incluyendo los especiales)
 def t_TkCaracter(t):
-	r'[\'](\\n|\\t|\\\'|\\\\|[^\'\\]{1})[\']'
+	r'[\'][^\'\\]{1}[\']'
 	t.type = 'TkCaracter'
+	return t
+
+def t_TkTab(t):
+	r'[\']\\t{1}[\']'
+	t.type = 'TkTab'
+	return t
+
+def t_TkSalto(t):	
+	r'[\']\\n{1}[\']'
+	t.type = 'TkSalto'
+	return t
+
+def t_TkComilla(t):
+	r'[\']\\\'{1}[\']'
+	t.type = 'TkComilla'
+	return t
+
+def t_TkBarra(t):
+	r'[\']\\\\{1}[\']'
+	t.type = 'TkBarra'
 	return t
 
 def t_TkCarError(t):
@@ -164,7 +183,7 @@ def t_TkCaracterError(t):
 
 #Expresion regular que maneja las palabras reservadas.
 def t_ID(t):
-	r'[a-zA-Z_][a-zA-Z_0-9]*'
+	r'[a-zA-Z][a-zA-Z_0-9]*'
 	t.type = reservadas.get(t.value, 'TkId')
 	return t
 
@@ -248,7 +267,7 @@ else:
 			# Cada string que representa un token tiene un formato distinto
 			if (tok.type == 'TkId' ):
 				lines[col].append(tok.type + "(\"" + tok.value + "\") " + col + " " + str(get_column(lexer.lexdata, tok)))
-			elif (tok.type == 'TkCaracter'):
+			elif (tok.type == 'TkCaracter' or tok.type == 'TkTab' or tok.type == 'TkSalto' or tok.type == 'TkBarra' or tok.type == 'TkComilla'):
 				lines[col].append(tok.type + "(" + tok.value + ") " + col + " " + str(get_column(lexer.lexdata, tok)))
 			elif (tok.type == 'TkNum'):
 				lines[col].append(tok.type + "(" + str(tok.value) + ") " + col + " " + str(get_column(lexer.lexdata, tok)))
@@ -259,7 +278,7 @@ else:
 		else:
 			if (tok.type == 'TkId'):
 				lines[col] = [tok.type + "(\"" + tok.value + "\") " + col + " " + str(get_column(lexer.lexdata, tok))]
-			elif (tok.type == 'TkCaracter'):
+			elif (tok.type == 'TkCaracter' or tok.type == 'TkTab' or tok.type == 'TkSalto' or tok.type == 'TkBarra' or tok.type == 'TkComilla'):
 				lines[col] = [tok.type + "(" + tok.value + ") " + col + " " + str(get_column(lexer.lexdata, tok))]
 			elif (tok.type == 'TkNum'):
 				lines[col] = [tok.type + "(" + str(tok.value) + ") " + col + " " + str(get_column(lexer.lexdata, tok))]
