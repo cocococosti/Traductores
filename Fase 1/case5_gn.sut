@@ -1,8 +1,0 @@
-begin
-	var a : char;
-    for i from 1 to 360 ->
-    	print i;
-    	c='a;
-    	i=0123;
-    end;
-end;
