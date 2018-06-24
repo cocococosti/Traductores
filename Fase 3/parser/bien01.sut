@@ -1,4 +1,5 @@
 with var num,cat : array [2+3] of array [4] of int
+var a:char
 begin
     print eq;
     with

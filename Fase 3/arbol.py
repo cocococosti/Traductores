@@ -4,6 +4,9 @@ class Nodo:
 		self.tipo = tipo
 		self.valor = valor
 		self.visitado = False
+		self.type = None
+		self.arreglo = None
+		self.lexeme = None
 		if hijos:
 			self.hijos = hijos
 		else:

@@ -14,6 +14,7 @@ from Lex import tokens
 from sys import argv
 import sys
 from arbol import *
+from contexto import *
 
 # Lista de precedencias 
 precedence = (
@@ -41,10 +42,9 @@ def p_programa(p):
 	'''
 	if (len(p) == 4):
 		p[0] = Nodo('BLOQUE', None, [p[2]])
-		#p[0] = (p[2])
+
 	else:
 		p[0] = Nodo('BLOQUE', None, [p[2], p[4]])
-		#p[0] = (p[4])
 
 
 # Regla para declaraciones de variables y su tipo
@@ -54,13 +54,24 @@ def p_declaracion(p):
 			    | TkVar variables TkDosPuntos TkBool
 			    | TkVar variables TkDosPuntos TkChar
 			    | TkVar variables TkDosPuntos arreglo
-			    | TkVar variables TkDosPuntos TkInt variables
-			    | TkVar variables TkDosPuntos TkBool variables
-			    | TkVar variables TkDosPuntos TkChar variables
-			    | TkVar variables TkDosPuntos arreglo variables
+			    | TkVar variables TkDosPuntos TkInt declaracion
+			    | TkVar variables TkDosPuntos TkBool declaracion
+			    | TkVar variables TkDosPuntos TkChar declaracion
+			    | TkVar variables TkDosPuntos arreglo declaracion
 
 	'''
-	p[0] = Nodo('DECLARACION', None, [p[2]])
+	if (len(p)==6):
+		if (p[4] == 'int' or p[4] == 'char' or p[4] == 'bool'):
+			p[0] = Nodo('DECLARACION', p[4], [p[2], p[5]])
+		else:
+			p[0] = Nodo('DECLARACION', 'arreglo', [p[4],p[2], p[5]])
+
+	else:
+		if (p[4] == 'int' or p[4] == 'char' or p[4] == 'bool'):
+			p[0] = Nodo('DECLARACION', p[4], [p[2]])
+		else:
+			p[0] = Nodo('DECLARACION', 'arreglo', [p[4],p[2]])
+
 
 # Definicion de arreglos
 def p_arreglo(p):
@@ -78,7 +89,11 @@ def p_arreglo(p):
 		    | TkArray TkCorcheteAbre opAritm TkCorcheteCierra TkOf TkBool
 		    | TkArray TkCorcheteAbre opAritm TkCorcheteCierra TkOf arreglo
 	'''
-	p[0] = Nodo('ARREGLO', None, None)
+	if (p[6] == 'int' or p[6] == 'bool' or p[6] == 'char'):
+		p[0] = Nodo('ARREGLO', p[6], None)
+	else:
+		p[0] = Nodo('ARREGLO', None, [p[6]])
+
 
 # Regla de valores terminales
 def p_terminal(p):
@@ -97,6 +112,8 @@ def p_terminal(p):
 	'''
 	if (len(p) == 5):
 		p[0] = Nodo("TERMINO", p[1]+p[2]+str(p[3])+p[4], None)
+	elif(len(p)== 4):
+		p[0] = Nodo("TERMINO", p[1]+str(p[2])+p[3], None)
 	else:
 		p[0] = Nodo('TERMINO', p[1], None)
 
@@ -403,12 +420,15 @@ def imprimirDeclaracion(nodo, tabs):
 				if (i.tipo == "VARIABLE"):
 					print(tabs + i.tipo)
 					print(tabs + "- Identificador: " + i.valor)
-					for j in i.hijos:
-						if (j.tipo == "EXPRESION"):
-							print(tabs + "- Valor: ")
-							imprimirExp(j, tabs+"\t")
-						else:
-							print(tabs + "- Valor: no asignado")
+					if (len(i.hijos) >0):
+						for j in i.hijos:
+							if (j.tipo == "EXPRESION"):
+								print(tabs + "- Valor: ")
+								imprimirExp(j, tabs+"\t")
+							else:
+								print(tabs + "- Valor: no asignado")
+					else:
+						print(tabs + "- Valor: no asignado")
 					
 				imprimirDeclaracion(i, tabs)
 
@@ -608,9 +628,11 @@ def main():
 
 	p = parser.parse(program)
 
-	print("SECUENCIACION")
+	#print("SECUENCIACION")
 	s = "\t"
 
-	imprimirArbol(p, s)
+	c = context()
+	c.contextCheck(p)
+	#imprimirArbol(p, s)
 
 main()
