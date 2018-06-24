@@ -1,3 +1,5 @@
+import sys
+
 class context:
 	def __init__(self):
 		self.scopes = []
@@ -19,13 +21,9 @@ class context:
 
 						top = self.scopes[0]
 
-						# PRUEBA
-						for n in top:
-							print (top[n].tipo)
-
 					elif (hijo.tipo == 'ASIGNACION'):
-
-						pass
+						var = self.checkVar(hijo.valor)
+							
 					elif (hijo.tipo == 'ENTRADA' or hijo.tipo == 'SALIDA' or hijo.tipo == 'TERMINO'):
 						pass
 					else:
@@ -36,13 +34,32 @@ class context:
 		# y retorna el tipo resultante 
 		# Usarla de forma recursiva con cada subexpresion
 		# retorna error si se obtiene tipos distintos
-		pass
+		if (exp.tipo == 'RELACIONAL' or exp.tipo == 'BOOLEANA'):
+			op1 = op.hijos[0]
+			op2 = op.hijos[1]
+			tipo1 = self.checkExp(op1)
+			tipo2 = self.checkExp(op2)
+			if (tipo1 != tipo2):
+				print('Error de contexto.')
+		elif(exp.tipo == 'ARITMETICA')
+		elif(exp.tipo == 'BOOLEANA UNARIA'):
+
+		elfi(exp.tipo == 'ARITMETICA UNARIA'):
+
+		elif(exp.tipo == 'TERMINO'):
 
 
-	def checkVar(self, exp):
+
+	def checkVar(self, var):
 		# chequea que una variable exista en los scopes y devuelve su tipo
 		# si no retorna, none
-		pass
+		for scope in self.scopes:
+			if var in scope:
+				return scope[var]
+			else:
+				print('Error de contexto. Variable no declarada.')
+				sys.exit(0)
+
 
 	def getTipoArreglo(self, arr):
 		if (len(arr.hijos) > 0):
