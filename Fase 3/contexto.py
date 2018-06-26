@@ -1,71 +1,66 @@
 import sys
 
 class context:
+
 	def __init__(self):
+		# Inicializar pila de scopes (variables declaradas para cada bloque)
 		self.scopes = []
 
 	def contextCheck(self, ast):
-		if (ast):
-			if (len(ast.hijos) > 0):
-				for hijo in ast.hijos:
-					if (hijo.tipo == 'DECLARACION'):
-						scope = {}
-						self.scopes.insert(0, scope)
 
-						tipo = hijo.valor
-						for k in hijo.hijos:
+		# Tomamos un arbol y recorremos sus hijos
+		if (ast):
+			if (len(ast.hijos) > 0): 
+
+				for nodo in ast.hijos:
+
+					if (nodo.tipo == 'BLOQUE'):
+
+						for hijo in nodo.hijos:
+							self.contextCheck(hijo)
+
+						# Removemos el top de la pila
+						self.scopes.pop(0)
+
+					elif (nodo.tipo == 'DECLARACION'):
+						# Creamos nuevo scope (por ahora vacio)
+						scope = {}
+						# Insertamos nuevo scope en la cabeza de la pila
+						self.scopes.insert(0, scope)
+						# Tipo de la declaracion
+						tipo = nodo.valor
+						# Para cada de una de las variables declaradas en el scope
+						for k in nodo.hijos:
+							# Si la variable es un arreglo entonces necesitamos hallar
+							# el tipo de los elementos del arreglo
 							if (k.tipo == 'ARREGLO'):
 								tipo = self.getTipoArreglo(k)
-							
-						self.nuevoScope(hijo, tipo)
+						# Insertamos variables en el scope
+						self.nuevoScope(nodo, tipo)
 
-						top = self.scopes[0]
+					elif (nodo.tipo == 'ASIGNACION'):
+						# Si encontramos una operacion de tipo Asignacion, chequear que
+						# la variable ha sido declarada y que el tipo concuerde
+						var = self.checkVar(nodo.valor)
+						tpe = self.checkExp(nodo.hijos[0])
+						if (var.tipo != tpe):
+							print("Error de contexto. Tipo incorrectos.")
+							sys.exit(0)
 
-					elif (hijo.tipo == 'ASIGNACION'):
-						var = self.checkVar(hijo.valor)
-							
-					elif (hijo.tipo == 'ENTRADA' or hijo.tipo == 'SALIDA' or hijo.tipo == 'TERMINO'):
-						pass
+					elif (nodo.tipo == 'EXPRESION'):
+						self.checkExp(nodo)
+						
 					else:
-						self.contextCheck(hijo) 
-
-	def checkExp(self, exp):
-		# Chequea si las operaciones de la expr son correctas
-		# y retorna el tipo resultante 
-		# Usarla de forma recursiva con cada subexpresion
-		# retorna error si se obtiene tipos distintos
-		if (exp.tipo == 'RELACIONAL' or exp.tipo == 'BOOLEANA'):
-			op1 = op.hijos[0]
-			op2 = op.hijos[1]
-			tipo1 = self.checkExp(op1)
-			tipo2 = self.checkExp(op2)
-			if (tipo1 != tipo2):
-				print('Error de contexto.')
-		elif(exp.tipo == 'ARITMETICA')
-		elif(exp.tipo == 'BOOLEANA UNARIA'):
-
-		elfi(exp.tipo == 'ARITMETICA UNARIA'):
-
-		elif(exp.tipo == 'TERMINO'):
-
-
-
-	def checkVar(self, var):
-		# chequea que una variable exista en los scopes y devuelve su tipo
-		# si no retorna, none
-		for scope in self.scopes:
-			if var in scope:
-				return scope[var]
-			else:
-				print('Error de contexto. Variable no declarada.')
-				sys.exit(0)
-
+						self.contextCheck(nodo)
 
 	def getTipoArreglo(self, arr):
+		# Recorremos los hijos del arreglo
+		# (pues puede ser un arreglo de arreglos)
 		if (len(arr.hijos) > 0):
 			for i in arr.hijos:
 				tipo = self.getTipoArreglo(i)
 				return tipo
+		# Cuando el arreglo no tenga mas hijos, en valor estara guardado el tipo
 		else:
 			return arr.valor
 
@@ -73,6 +68,8 @@ class context:
 		# Scope actual
 		top = self.scopes[0]
 
+		# En una declaracion podemos estar declarando variable solas
+		# o arreglos
 		if (dec.tipo == 'VARIABLE'):
 			# Construimos objeto simbolo
 			var = simbolo(dec.valor, tipo)
@@ -102,6 +99,70 @@ class context:
 					if (k.tipo == 'ARREGLO'):
 						tipo = self.getTipoArreglo(k)
 				self.nuevoScope(i, tipo)
+
+	def checkExp(self, exp):
+		# Chequea si las operaciones de la expr son correctas
+		# y retorna el tipo resultante 
+		# Usarla de forma recursiva con cada subexpresion
+		# retorna error si se obtiene tipos distintos
+
+		for hijo in exp.hijos:
+			if (hijo.tipo == 'BOOLEANA'):
+				op1 = hijo.hijos[0]
+				op2 = hijo.hijos[1]
+				tipo1 = self.checkExp(op1)
+				tipo2 = self.checkExp(op2)
+				if (tipo1 != tipo2):
+					print('Error de contexto. Tipo incorrecto booleana.')
+					sys.exit(0)
+
+			elif (hijo.tipo == 'RELACIONAL'):
+
+				op1 = hijo.hijos[0]
+				op2 = hijo.hijos[1]
+
+				tipo1 = self.checkExp(op1)
+				tipo2 = self.checkExp(op2)
+				if (tipo1 != tipo2):
+					print('Error de contexto. Tipo incorrecto relacional.')
+					sys.exit(0)
+				else:
+					return "bool"
+
+			elif(hijo.tipo == 'BIN_ARITMETICA'):
+				op1 = hijo.hijos[0]
+				op2 = hijo.hijos[1]
+				tipo1 = self.checkExp(op1)
+				tipo2 = self.checkExp(op2)
+				if (tipo1 != tipo2):
+					print('Error de contexto. Tipo incorrecto aritmetica.')
+					sys.exit(0)
+				else:
+					return tipo1
+			elif(hijo.tipo == 'BOOLEANA UNARIA'):
+				pass
+
+			elif(hijo.tipo == 'ARITMETICA UNARIA'):
+				pass
+
+			elif(hijo.tipo == 'TERMINO'):
+				return hijo.type
+
+
+
+	def checkVar(self, var):
+		# chequea que una variable exista en los scopes y devuelve su tipo
+		# si no retorna, none
+		for i in range(len(self.scopes)):
+			if var in self.scopes[i]:
+				return self.scopes[i][var]
+			else:
+				print('Error de contexto. Variable no declarada.')
+				sys.exit(0)
+
+
+
+
 
 class simbolo():
 	def __init__(self, val, t):
