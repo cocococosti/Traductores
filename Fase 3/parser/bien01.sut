@@ -1,14 +1,14 @@
 with var num,cat : array [1] of array [5] of int
 var a:array [5] of int
-var i:int
+var i:char
 begin
     print eq;
     with
     	var num : array [1] of array [5] of char
-        var i:char
+        var j:char
     begin
-    	i <- num[a[1]];    
+    	i <- j;    
         
     end
-    i <- num[num[1]];
+    i <- 'A';
 end
