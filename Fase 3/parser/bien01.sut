@@ -1,14 +1,14 @@
-with var num,cat : array [2+3] of array [4] of int
-var a:char
+with var num,cat : array [1] of array [5] of int
+var a:array [5] of int
 var i:int
 begin
     print eq;
     with
-    	var num : int
-        var i:bool
+    	var num : array [1] of array [5] of char
+        var i:char
     begin
-    	i <- True;    
-        i <- 5 >= 4-3;
+    	i <- num[a[1]];    
+        
     end
-    i <- 3;
+    i <- num[num[1]];
 end

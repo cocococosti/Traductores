@@ -19,7 +19,7 @@ class context:
 						for hijo in nodo.hijos:
 							self.contextCheck(hijo)
 
-						# Removemos el top de la pila
+						# Removemos el top de la pila al terminar con este bloque
 						self.scopes.pop(0)
 
 					elif (nodo.tipo == 'DECLARACION'):
@@ -29,36 +29,106 @@ class context:
 						self.scopes.insert(0, scope)
 						# Tipo de la declaracion
 						tipo = nodo.valor
+						print(tipo)
 						# Para cada de una de las variables declaradas en el scope
 						for k in nodo.hijos:
 							# Si la variable es un arreglo entonces necesitamos hallar
 							# el tipo de los elementos del arreglo
+							
+
+
+
+							# VER AQUI ARREGLAR DECLARACIONES ANIDADAS
+
+
 							if (k.tipo == 'ARREGLO'):
-								tipo = self.getTipoArreglo(k)
-						# Insertamos variables en el scope
-						self.nuevoScope(nodo, tipo)
+								tipo = self.getTipo(k)
+								# Si es un arreglo tambien hay que chequear el tamaño
+								# sea de tipo entero
+								
+								self.checkTipoArrOfArr(k)
+
+
+							# HACER TODOS LOS CHEQUEOS DE ESTA VAR ANTES DE METERLA EN EL SCOPE
+							# Insertamos variables en el scope
+							self.nuevoScope(nodo, tipo)
 
 					elif (nodo.tipo == 'ASIGNACION'):
 						# Si encontramos una operacion de tipo Asignacion, chequear que
 						# la variable ha sido declarada y que el tipo concuerde
-						var = self.checkVar(nodo.valor)
+
+						#Obtengamos id
+						if (isinstance(nodo.valor, str)):
+							var = self.checkVar(nodo.valor)
+						else:
+							pass
+						# Si la var es de un arreglo chequear que el indice es de tipo entero
+
 						tpe = self.checkExp(nodo.hijos[0])
 						if (var.tipo != tpe):
-							print("Error de contexto. Tipo incorrectos.")
+							print("Error de contexto. Tipo incorrecaaaaatos.")
 							sys.exit(0)
 
-					elif (nodo.tipo == 'EXPRESION'):
-						self.checkExp(nodo)
+					# Añadir aqui otros elif para chequear los otros tipos de operaciones
+
+
+
 						
 					else:
 						self.contextCheck(nodo)
 
-	def getTipoArreglo(self, arr):
+	def checkTipoArrOfArr(self,arr):
+		# Cheuqear tipo del indice
+		t = self.getTipoId(arr.arreglo)
+		if (t != 'int'):
+			print('Error de contexto. Tipo incorrecto para indice del arreglo.')
+			sys.exit(0)
+		if (len(arr.hijos)>0):
+			for i in arr.hijos:
+				self.checkTipoArrOfArr(i)
+
+		#chequear var del arreglo
+
+		#chequear indice del arreglo
+
+
+	def getTipoId(self, indice):
+		# Chequea tipo del indice y lo retorna si es correcto
+		# var -> nombre de la variable que contiene el arreglo
+		# indice -> indice a acceder del arreglo
+
+
+		# Obtengamos tipo del indice
+		if (indice.tipo == 'BIN_ARITMETICA'):
+			tipoIndex = self.checkExp(indice)
+		elif (indice.tipo == 'TERMINO'):
+			if (len(indice.hijos) > 0):
+				for hijo in indice.hijos:
+					tipoIndex = self.getTipoId(hijo)
+					if (tipoIndex != 'int'):
+						print('Error de contexto. Tipo incorrecto para indice del arreglo.')
+						sys.exit(0)
+			else:
+				return indice.type
+		elif (indice.tipo == 'VAR_ARREGLO'):
+			t = self.checkVar(indice.valor)
+			for hijo in indice.hijos:
+				tipoIndex = self.getTipoId(hijo)
+
+			if (t.tipo != tipoIndex != 'int'):
+				print('Error de contexto. Tipo incorrecto para indice del arreglo.')
+				sys.exit(0)
+
+			return t.tipo
+
+
+
+	def getTipo(self, arr):
 		# Recorremos los hijos del arreglo
 		# (pues puede ser un arreglo de arreglos)
 		if (len(arr.hijos) > 0):
 			for i in arr.hijos:
-				tipo = self.getTipoArreglo(i)
+				tipo = self.getTipo(i)
 				return tipo
 		# Cuando el arreglo no tenga mas hijos, en valor estara guardado el tipo
 		else:
@@ -72,6 +142,7 @@ class context:
 		# o arreglos
 		if (dec.tipo == 'VARIABLE'):
 			# Construimos objeto simbolo
+
 			var = simbolo(dec.valor, tipo)
 			# Agregamos simbolo a la tabla
 			top[dec.valor] = var 
@@ -80,6 +151,7 @@ class context:
 		# Recorremos arbol
 		for i in dec.hijos:
 			if (i.tipo == 'VARIABLE'):
+
 				# Construir objeto simbolo
 				var = simbolo(i.valor, tipo)
 				# Agregamos simbolo a la tabla
@@ -97,7 +169,7 @@ class context:
 				tipo = i.valor
 				for k in i.hijos:
 					if (k.tipo == 'ARREGLO'):
-						tipo = self.getTipoArreglo(k)
+						tipo = self.getTipo(k)
 				self.nuevoScope(i, tipo)
 
 	def checkExp(self, exp):
@@ -115,6 +187,8 @@ class context:
 				if (tipo1 != tipo2):
 					print('Error de contexto. Tipo incorrecto booleana.')
 					sys.exit(0)
+				else:
+					return 'bool'
 
 			elif (hijo.tipo == 'RELACIONAL'):
 
@@ -145,8 +219,23 @@ class context:
 			elif(hijo.tipo == 'ARITMETICA UNARIA'):
 				pass
 
+			elif(hijo.tipo == "CARACTERES"):
+				pass
+
 			elif(hijo.tipo == 'TERMINO'):
 				return hijo.type
+			
+			elif(hijo.tipo == 'VAR_ARREGLO'):
+				# Chequear que indices son correctos
+				index = self.getTipoId(hijo.hijos[0])
+				if (index != 'int'):
+					print('Error de contexto. Tipo incorrecto indice.')
+					sys.exit(0)
+				#retorna tipo del arreglo
+				t = self.checkVar(hijo.valor)
+
+				return t.tipo
+
 
 
 
@@ -156,9 +245,9 @@ class context:
 		for i in range(len(self.scopes)):
 			if var in self.scopes[i]:
 				return self.scopes[i][var]
-			else:
-				print('Error de contexto. Variable no declarada.')
-				sys.exit(0)
+		
+		print('Error de contexto. Variable ' + var + ' no declarada.')
+		sys.exit(0)
 
 
 
@@ -166,8 +255,8 @@ class context:
 
 class simbolo():
 	def __init__(self, val, t):
-		self.tipo = t
-		self.valor = val
+		self.tipo = t # tipo de la variable
+		self.valor = val # identificador o valor de la variable
 
 
 

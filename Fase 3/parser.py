@@ -31,7 +31,8 @@ precedence = (
 	('left', 'TkValorAscii'),
 	('left', 'TkIgual', 'TkDesigual'),
 	('left', 'TkConjuncion', 'TkDisyuncion'),
-	('right', 'TkNot')
+	('right', 'TkNot'),
+	('nonassoc', 'TkNum', 'TkId')
 )
 
 # Regla principal, define un bloque de instrucciones
@@ -76,23 +77,25 @@ def p_declaracion(p):
 # Definicion de arreglos
 def p_arreglo(p):
 	'''
-	arreglo : TkArray TkCorcheteAbre TkNum TkCorcheteCierra TkOf TkChar
-		    | TkArray TkCorcheteAbre TkNum TkCorcheteCierra TkOf TkInt
-		    | TkArray TkCorcheteAbre TkNum TkCorcheteCierra TkOf TkBool
-		    | TkArray TkCorcheteAbre TkNum TkCorcheteCierra TkOf arreglo
-		    | TkArray TkCorcheteAbre TkId TkCorcheteCierra TkOf TkChar
-		    | TkArray TkCorcheteAbre TkId TkCorcheteCierra TkOf TkInt
-		    | TkArray TkCorcheteAbre TkId TkCorcheteCierra TkOf TkBool
-		    | TkArray TkCorcheteAbre TkId TkCorcheteCierra TkOf arreglo
+	arreglo : TkArray TkCorcheteAbre terminal TkCorcheteCierra TkOf TkChar
+		    | TkArray TkCorcheteAbre terminal TkCorcheteCierra TkOf TkInt
+		    | TkArray TkCorcheteAbre terminal TkCorcheteCierra TkOf TkBool
+		    | TkArray TkCorcheteAbre terminal TkCorcheteCierra TkOf arreglo
 		    | TkArray TkCorcheteAbre opAritm TkCorcheteCierra TkOf TkChar
 		    | TkArray TkCorcheteAbre opAritm TkCorcheteCierra TkOf TkInt
 		    | TkArray TkCorcheteAbre opAritm TkCorcheteCierra TkOf TkBool
 		    | TkArray TkCorcheteAbre opAritm TkCorcheteCierra TkOf arreglo
+		    | TkArray TkCorcheteAbre indice TkCorcheteCierra TkOf TkChar
+		    | TkArray TkCorcheteAbre indice TkCorcheteCierra TkOf TkInt
+		    | TkArray TkCorcheteAbre indice TkCorcheteCierra TkOf TkBool
+		    | TkArray TkCorcheteAbre indice TkCorcheteCierra TkOf arreglo
 	'''
 	if (p[6] == 'int' or p[6] == 'bool' or p[6] == 'char'):
 		p[0] = Nodo('ARREGLO', p[6], None)
+		p[0].arreglo = p[3]
 	else:
 		p[0] = Nodo('ARREGLO', None, [p[6]])
+		p[0].arreglo = p[3]
 
 
 # Regla de valores terminales
@@ -107,46 +110,13 @@ def p_terminal(p):
 			  | TkSalto
 			  | TkComilla
 			  | TkBarra
-			  | TkId TkCorcheteAbre TkNum TkCorcheteCierra
-			  | TkId TkCorcheteAbre TkId TkCorcheteCierra
 			  | TkParAbre terminal TkParCierra
 	'''
 	if (len(p) == 5):
 		# Termnino con corchetes
-		p[0] = Nodo("TERMINO", p[1]+p[2]+str(p[3])+p[4], None)
-		if ((str(p[1])).isdigit()):
-			p[0].type = "int"
-			p[0].arreglo = p[3]
-			p[0].lexeme = p[1]
-		elif (p[1] == "True" or p[1] == "False"):
-			p[0].type = "bool"
-			p[0].arreglo = p[3]
-			p[0].lexeme = p[1]
-		elif (type(p[1]) is str):
-			p[0].type = "char"
-			p[0].arreglo = p[3]
-			p[0].lexeme = p[1]
-		elif (p[1] == "\t"):
-			p[0].type = "Tab"
-			p[0].arreglo = p[3]
-			p[0].lexeme = "\t"
-		elif (p[1] == "\n"):
-			p[0].type = "Salto"
-			p[0].arreglo = p[3]
-			p[0].lexeme = "\n"
-		elif (p[1] == "\'"):
-			p[0].type = "Comilla"
-			p[0].arreglo = p[3]
-			p[0].lexeme = "\'"
-		elif(p[1] == "\\"):
-			p[0].type = "Barra"
-			p[0].arreglo = p[3]
-			p[0].lexeme = "\\"
-		else:
-			p[0].type = "String"
-			p[0].arreglo = p[3]
-			p[0].arreglo = p[2]
-			p[0].lexeme = p[1]			
+		p[0] = Nodo("TERMINO", p[1]+p[2]+str(p[3])+p[4], [p[3]])
+				
+			
 
 	elif(len(p)== 4):
 
@@ -163,7 +133,7 @@ def p_terminal(p):
 			p[0].type = "char"
 			p[0].lexeme = p[1] + p[2].lexeme + p[3]	
 		else:
-			p[0].type = "Variable"
+			p[0].type = "var"
 			p[0].lexeme = p[1] + p[2].lexeme + p[3]		
 
 	else:
@@ -180,7 +150,7 @@ def p_terminal(p):
 			p[0].type = "char"
 			p[0].lexeme = p[1]
 		else:
-			p[0].type = "Variable"
+			p[0].type = "var"
 			p[0].lexeme = p[1]
 
 # Regla para definir el cuerpo de un bloque (conjunto de instrucciones)
@@ -236,8 +206,23 @@ def p_condicional(p):
 def p_asignacion(p):
 	'''
 	asignacion : TkId TkAsignacion expresion
+			   | indice TkAsignacion expresion
+			   
 	'''
-	p[0] = Nodo("ASIGNACION", p[1], [p[3]])
+	if (len(p) == 7):
+		p[0] = Nodo("ASIGNACION", p[1], [p[6]])
+		p[0].arreglo = p[3]
+	else:
+		p[0] = Nodo("ASIGNACION", p[1], [p[3]])
+		p[0].arreglo = p[3]
+
+def p_indice(p):
+	'''
+	indice : TkId TkCorcheteAbre terminal TkCorcheteCierra
+	       | TkId TkCorcheteAbre opAritm TkCorcheteCierra
+	       | TkId TkCorcheteAbre indice TkCorcheteCierra
+	'''
+	p[0] = Nodo("VAR_ARREGLO", p[1], [p[3]])
 
 # Entrada
 def p_input(p):
@@ -292,7 +277,8 @@ def p_expresion(p):
               | opRel
               | opCar
               | opBool
-              | TkId TkCorcheteAbre opAritm TkCorcheteCierra
+              | indice
+
 	'''
 
 	if (len(p) == 5):
