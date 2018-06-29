@@ -125,7 +125,7 @@ def p_terminal(p):
 
 		if ((str(p[2].lexeme)).isdigit()):
 			p[0].type = "int"
-			p[0].lexeme = p[1] + p[2].lexeme + p[3]
+			p[0].lexeme = p[1] + str(p[2].lexeme) + p[3]
 		elif (p[2].lexeme == "True" or p[2].lexeme == "False"):
 			p[0].type = "bool"
 			p[0].lexeme = p[1] + p[2].lexeme + p[3]
@@ -188,12 +188,8 @@ def p_instruccion(p):
 # Definicion de instrucciones condicionales
 def p_condicional(p):
 	'''
-	condicional : TkIf opBool TkHacer cuerpo TkEnd
-			    | TkIf opBool TkHacer cuerpo TkOtherwise TkHacer cuerpo TkEnd
-			    | TkIf opRel TkHacer cuerpo TkEnd
-			    | TkIf opRel TkHacer cuerpo TkOtherwise TkHacer cuerpo TkEnd
-			    | TkIf terminal TkHacer cuerpo TkEnd
-			    | TkIf terminal TkHacer cuerpo TkOtherwise TkHacer cuerpo TkEnd
+	condicional : TkIf expresion TkHacer cuerpo TkEnd
+			    | TkIf expresion TkHacer cuerpo TkOtherwise TkHacer cuerpo TkEnd
 
 
 	'''
@@ -325,6 +321,11 @@ def p_opCar(p):
 	      | TkValorAscii terminal
 	      | TkValorAscii terminal TkSiguienteCar
 	      | TkValorAscii terminal TkAnteriorCar
+	      | indice TkSiguienteCar
+		  | indice TkAnteriorCar
+	      | TkValorAscii indice
+	      | TkValorAscii indice TkSiguienteCar
+	      | TkValorAscii indice TkAnteriorCar
 
 	'''
 	if (p[1] == '#'):
@@ -395,7 +396,7 @@ def p_opBool(p):
 
 # Regla para errores
 def p_error(p):
-	print("\nError de sintaxis")
+	print("\nError de sintaxis en la linea ", p.lineno + 1)
 	sys.exit(0)
 
 def imprimirTermino(nodo, tabs):
@@ -582,7 +583,12 @@ def imprimirUnaria(nodo, tabs):
 # Para asignaciones
 def imprimirAsig(nodo, tabs):
 	print(tabs + nodo.tipo)
-	print(tabs + "Identificador: " + nodo.valor)
+	if (isinstance(nodo.valor, str)):
+		print(tabs + "Identificador: " + nodo.valor)
+	else:
+		print(tabs + "Identificador: " + nodo.valor.valor)
+
+
 	print(tabs + "Valor: ")
 
 	imprimirExp(nodo.hijos[0], tabs + "\t")

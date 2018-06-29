@@ -34,7 +34,11 @@ class context:
 
 						#Obtengamos id
 						if (isinstance(nodo.valor, str)):
-							var = self.checkVar(nodo.valor).tipo
+							var = self.checkVar(nodo.valor)
+							if (var.contador):
+								print("se trata de modificar la variable que pertenece a una iteracion.")
+								sys.exit(0)
+							var = var.tipo
 						else:
 							var = self.getTipoId(nodo.valor)
 
@@ -42,14 +46,98 @@ class context:
 						tpe = self.checkExp(nodo.hijos[0])
 
 						if (var != tpe):
-							print("Error de contexto. Tipo incorrecaaaaatos.")
+							print("Error de contexto. Tipo incorrectos.")
 							sys.exit(0)
 
-					# Añadir aqui otros elif para chequear los otros tipos de operaciones
+					
+					elif(nodo.tipo == 'CONDICIONAL'):
+
+						for h in nodo.hijos:
+
+							# Recorrer el cuerpo de forma recursiva
+							if (h.tipo == 'CUERPO'):
+								self.contextCheck(h)
+							# Chequear que la condicion sea de tipo booleana
+							else:
+								t = self.checkExp(h)
+
+								if (t != 'bool'):
+									print("Error de contexto. Tipo incorrectos.")
+									sys.exit(0)
+
+					elif (nodo.tipo == 'ITERACION INDETERMINADA'):
+						hijo = nodo.valor
+						op1 = hijo.hijos[0]
+						op2 = hijo.hijos[1]
+
+						tipo1 = self.checkExp(op1)
+						tipo2 = self.checkExp(op2)
+
+						if (hijo.valor != '/=' and hijo.valor != '='):
+							if (tipo1 != 'int' or tipo2 != 'int'):
+								print('Error de contexto. Tipo incorrecto relacional.')
+								sys.exit(0)
 
 
-
+						if (tipo1 != tipo2):
+							print('Error de contexto. Tipo incorrecto relacional.')
+							sys.exit(0)
+						else:
+							t = 'bool'
 						
+						if (t != 'bool'):
+							print("Error de contexto. Tipo incorrectos.")
+							sys.exit(0)
+						
+						self.contextCheck(nodo.hijos[0])
+
+					elif (nodo.tipo == 'ITERACION DETERMINADA'):
+
+						# agregar atributo a la var de iteracion, set to true 
+						# al salir de los hijos del ciclo set to false
+
+						cont = nodo.valor[0]
+						scope = {}
+						scope[cont] = simbolo(cont, 'int')
+						scope[cont].contador = True
+
+						# Chequear que los rangos sean enteros
+						limInf = nodo.valor[1]
+						tipoInf = self.checkExp(limInf)
+						limSup = nodo.valor[2]
+						tipoSup = self.checkExp(limSup)
+
+						if (tipoSup != tipoInf != 'int'):
+							print('Error de contexto. Rangos del ciclo no son enteros.')
+							sys.exit(0)
+
+						step = nodo.valor[3]
+
+						if (step != '1'):
+							if (step.tipo == 'TERMINO'):
+								if (len(step.hijos)>0):
+									t = self.checkExp(step)
+								else:
+									t = step.type
+							else:
+								t = self.checkExp(step)
+
+							if (t != 'int'):
+								print('Error de contexto.')
+								sys.exit(0)
+
+
+
+
+						# Insertamos nuevo scope en la cabeza de la pila
+						self.scopes.insert(0, scope)
+
+
+
+						self.contextCheck(nodo.hijos[0])
+						
+						# set aqui
+						self.scopes.pop(0)
 					else:
 						self.contextCheck(nodo)
 
@@ -170,7 +258,7 @@ class context:
 				op2 = hijo.hijos[1]
 				tipo1 = self.checkExp(op1)
 				tipo2 = self.checkExp(op2)
-				if (tipo1 != tipo2):
+				if (tipo1 != tipo2 != 'bool'):
 					print('Error de contexto. Tipo incorrecto booleana.')
 					sys.exit(0)
 				else:
@@ -183,6 +271,13 @@ class context:
 
 				tipo1 = self.checkExp(op1)
 				tipo2 = self.checkExp(op2)
+
+				if (hijo.valor != '/=' and hijo.valor != '='):
+					if (tipo1 != 'int' or tipo2 != 'int'):
+						print('Error de contexto. Tipo incorrecto relacional.')
+						sys.exit(0)
+
+
 				if (tipo1 != tipo2):
 					print('Error de contexto. Tipo incorrecto relacional.')
 					sys.exit(0)
@@ -194,20 +289,33 @@ class context:
 				op2 = hijo.hijos[1]
 				tipo1 = self.checkExp(op1)
 				tipo2 = self.checkExp(op2)
-				if (tipo1 != tipo2):
+				if (tipo1 != tipo2 != 'int'):
 					print('Error de contexto. Tipo incorrecto aritmetica.')
 					sys.exit(0)
 				else:
-					return tipo1
+					return 'int'
 			elif(hijo.tipo == 'BOOLEANA UNARIA'):
-				pass
+				op = hijo.hijos[0]
+				tipo = self.checkExp(op)
+				if (tipo != 'bool'):                    
+					print('Error de contexto. Tipo incorrecto booleana unaria.')
+				else:
+					return "bool"
 
-			elif(hijo.tipo == 'ARITMETICA UNARIA'):
-				pass
+			elif(hijo.tipo == 'OPERACION UNARIA'):
+				op = hijo.hijos[0]
+				tipo = self.checkExp(op)
+				if (tipo != 'int'):
+					print('Error de contexto. Tipo incorrecto aritmetica unaria.')
 
-			elif(hijo.tipo == "CARACTERES"):
-				pass
-
+			elif(hijo.tipo == "OPERACION CARACTER"):
+			
+				t = self.checkExp(hijo)
+				if (t != 'char'):
+					print('Error de contexto. Tipo incorrecto caracter.')
+					sys.exit(0)
+				else:
+					return 'char'
 			elif(hijo.tipo == 'TERMINO'):
 				if (hijo.type == 'var'):
 					
@@ -234,6 +342,14 @@ class context:
 	def checkVar(self, var):
 		# chequea que una variable exista en los scopes y devuelve su tipo
 		# si no retorna, none
+
+		# chequeeemos que la variable no esta siendo redeclarada
+		top = self.scopes[0]
+
+		if var in top:
+			print('Error. Variable ya declarada.')
+			sys.exit(0)
+
 		for i in range(len(self.scopes)):
 			if var in self.scopes[i]:
 				return self.scopes[i][var]
@@ -250,6 +366,7 @@ class simbolo():
 		self.tipo = t # tipo de la variable
 		self.valor = val # identificador o valor de la variable
 		self.asignado = None # valor del simbolo en caso de que se trate de una var
+		self.contador = None # para chequear si una variable esta siendo usada como contador
 
 
 
