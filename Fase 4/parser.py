@@ -14,6 +14,7 @@ from Lex import tokens
 from sys import argv
 import sys
 from arbol import *
+from contexto import *
 
 # Lista de precedencias 
 precedence = (
@@ -30,7 +31,8 @@ precedence = (
 	('left', 'TkValorAscii'),
 	('left', 'TkIgual', 'TkDesigual'),
 	('left', 'TkConjuncion', 'TkDisyuncion'),
-	('right', 'TkNot')
+	('right', 'TkNot'),
+	('nonassoc', 'TkNum', 'TkId')
 )
 
 # Regla principal, define un bloque de instrucciones
@@ -75,23 +77,25 @@ def p_declaracion(p):
 # Definicion de arreglos
 def p_arreglo(p):
 	'''
-	arreglo : TkArray TkCorcheteAbre TkNum TkCorcheteCierra TkOf TkChar
-		    | TkArray TkCorcheteAbre TkNum TkCorcheteCierra TkOf TkInt
-		    | TkArray TkCorcheteAbre TkNum TkCorcheteCierra TkOf TkBool
-		    | TkArray TkCorcheteAbre TkNum TkCorcheteCierra TkOf arreglo
-		    | TkArray TkCorcheteAbre TkId TkCorcheteCierra TkOf TkChar
-		    | TkArray TkCorcheteAbre TkId TkCorcheteCierra TkOf TkInt
-		    | TkArray TkCorcheteAbre TkId TkCorcheteCierra TkOf TkBool
-		    | TkArray TkCorcheteAbre TkId TkCorcheteCierra TkOf arreglo
+	arreglo : TkArray TkCorcheteAbre terminal TkCorcheteCierra TkOf TkChar
+		    | TkArray TkCorcheteAbre terminal TkCorcheteCierra TkOf TkInt
+		    | TkArray TkCorcheteAbre terminal TkCorcheteCierra TkOf TkBool
+		    | TkArray TkCorcheteAbre terminal TkCorcheteCierra TkOf arreglo
 		    | TkArray TkCorcheteAbre opAritm TkCorcheteCierra TkOf TkChar
 		    | TkArray TkCorcheteAbre opAritm TkCorcheteCierra TkOf TkInt
 		    | TkArray TkCorcheteAbre opAritm TkCorcheteCierra TkOf TkBool
 		    | TkArray TkCorcheteAbre opAritm TkCorcheteCierra TkOf arreglo
+		    | TkArray TkCorcheteAbre indice TkCorcheteCierra TkOf TkChar
+		    | TkArray TkCorcheteAbre indice TkCorcheteCierra TkOf TkInt
+		    | TkArray TkCorcheteAbre indice TkCorcheteCierra TkOf TkBool
+		    | TkArray TkCorcheteAbre indice TkCorcheteCierra TkOf arreglo
 	'''
 	if (p[6] == 'int' or p[6] == 'bool' or p[6] == 'char'):
 		p[0] = Nodo('ARREGLO', p[6], None)
+		p[0].arreglo = p[3]
 	else:
 		p[0] = Nodo('ARREGLO', None, [p[6]])
+		p[0].arreglo = p[3]
 
 
 # Regla de valores terminales
@@ -106,76 +110,48 @@ def p_terminal(p):
 			  | TkSalto
 			  | TkComilla
 			  | TkBarra
-			  | TkId TkCorcheteAbre TkNum TkCorcheteCierra
-			  | TkId TkCorcheteAbre TkId TkCorcheteCierra
 			  | TkParAbre terminal TkParCierra
 	'''
 	if (len(p) == 5):
-		p[0] = Nodo("TERMINO", p[1]+p[2]+str(p[3])+p[4], None)
-		if ((str(p[1])).isdigit()):
-			p[0].type = "Entero"
-			p[0].arreglo = p[3]
-			p[0].lexeme = p[1]
-		elif (p[1] == "True" or p[1] == "False"):
-			p[0].type = "Booleano"
-			p[0].arreglo = p[3]
-			p[0].lexeme = p[1]
-		elif (type(p[1]) is str):
-			p[0].type = "Caracter"
-			p[0].arreglo = p[3]
-			p[0].lexeme = p[1]
-		elif (p[1] == "\t"):
-			p[0].type = "Tab"
-			p[0].arreglo = p[3]
-			p[0].lexeme = "\t"
-		elif (p[1] == "\n"):
-			p[0].type = "Salto"
-			p[0].arreglo = p[3]
-			p[0].lexeme = "\n"
-		elif (p[1] == "\'"):
-			p[0].type = "Comilla"
-			p[0].arreglo = p[3]
-			p[0].lexeme = "\'"
-		elif(p[1] == "\\"):
-			p[0].type = "Barra"
-			p[0].arreglo = p[3]
-			p[0].lexeme = "\\"
-		else:
-			p[0].type = "String"
-			p[0].arreglo = p[3]
-			p[0].arreglo = p[2]
-			p[0].lexeme = p[1]			
+		# Termnino con corchetes
+		p[0] = Nodo("TERMINO", p[1]+p[2]+str(p[3])+p[4], [p[3]])
+				
+			
 
 	elif(len(p)== 4):
-		p[0] = Nodo("TERMINO", p[1]+str(p[2])+p[3], None)
+
+		# Termino entre parentesis
+		p[0] = Nodo("TERMINO", p[1]+str(p[2])+p[3], [p[2]])
+
 		if ((str(p[2].lexeme)).isdigit()):
-			p[0].type = "Entero"
-			p[0].lexeme = p[1] + p[2].lexeme + p[3]
-		elif (p[2].lexeme == "True" or p[2].lexeme == "False"):
-			p[0].type = "Booleano"
+			p[0].type = "int"
+			p[0].lexeme = p[1] + str(p[2].lexeme) + p[3]
+		elif (p[2].lexeme == "true" or p[2].lexeme == "false"):
+			p[0].type = "bool"
 			p[0].lexeme = p[1] + p[2].lexeme + p[3]
 		elif (p[2].lexeme[0]=="\'"):
-			p[0].type = "Caracter"
+			p[0].type = "char"
 			p[0].lexeme = p[1] + p[2].lexeme + p[3]	
 		else:
-			p[0].type = "Variable"
+			p[0].type = "var"
 			p[0].lexeme = p[1] + p[2].lexeme + p[3]		
 
 	else:
+
 		p[0] = Nodo('TERMINO', p[1], None)
+
 		if ((str(p[1])).isdigit()):
-			p[0].type = "Entero"
+			p[0].type = "int"
 			p[0].lexeme = p[1]
-		elif (p[1] == "True" or p[1] == "False"):
-			p[0].type = "Booleano"
+		elif (p[1] == "true" or p[1] == "false"):
+			p[0].type = "bool"
 			p[0].lexeme = p[1]
 		elif (p[1][0]=="\'"):
-			p[0].type = "Caracter"
+			p[0].type = "char"
 			p[0].lexeme = p[1]
 		else:
-			p[0].type = "Variable"
-			p[0].lexeme = p[1]							
-		
+			p[0].type = "var"
+			p[0].lexeme = p[1]
 
 # Regla para definir el cuerpo de un bloque (conjunto de instrucciones)
 def p_cuerpo(p):
@@ -192,6 +168,7 @@ def p_cuerpo(p):
 	else:
 		p[0] = Nodo("CUERPO", None, [p[1], p[2]])
 
+
 # Definicion de una instruccion
 def p_instruccion(p):
 	'''
@@ -206,17 +183,13 @@ def p_instruccion(p):
 	'''
 	
 	p[0] = Nodo("INSTRUCCION", None, [p[1]])
-	
+
 
 # Definicion de instrucciones condicionales
 def p_condicional(p):
 	'''
-	condicional : TkIf opBool TkHacer cuerpo TkEnd
-			    | TkIf opBool TkHacer cuerpo TkOtherwise TkHacer cuerpo TkEnd
-			    | TkIf opRel TkHacer cuerpo TkEnd
-			    | TkIf opRel TkHacer cuerpo TkOtherwise TkHacer cuerpo TkEnd
-			    | TkIf terminal TkHacer cuerpo TkEnd
-			    | TkIf terminal TkHacer cuerpo TkOtherwise TkHacer cuerpo TkEnd
+	condicional : TkIf expresion TkHacer cuerpo TkEnd
+			    | TkIf expresion TkHacer cuerpo TkOtherwise TkHacer cuerpo TkEnd
 
 
 	'''
@@ -229,19 +202,31 @@ def p_condicional(p):
 def p_asignacion(p):
 	'''
 	asignacion : TkId TkAsignacion expresion
-	
+			   | indice TkAsignacion expresion
+			   
 	'''
-	
-	p[0] = Nodo("ASIGNACION", p[1], [p[3]])
-	
+	if (len(p) == 7):
+		p[0] = Nodo("ASIGNACION", p[1], [p[6]])
+		p[0].arreglo = p[3]
+	else:
+		p[0] = Nodo("ASIGNACION", p[1], [p[3]])
+		p[0].arreglo = p[3]
 
+def p_indice(p):
+	'''
+	indice : TkId TkCorcheteAbre terminal TkCorcheteCierra
+	       | TkId TkCorcheteAbre opAritm TkCorcheteCierra
+	       | TkId TkCorcheteAbre indice TkCorcheteCierra
+	'''
+	p[0] = Nodo("VAR_ARREGLO", p[1], [p[3]])
+	p[0].arreglo = p[1]
 
 # Entrada
 def p_input(p):
 	'''
 	input : TkRead TkId
 	'''
-	p[0] = Nodo("ENTRADA", p[1], [p[2]])
+	p[0] = Nodo("ENTRADA", p[2], None)
 
 #Salida
 def p_output(p):
@@ -289,9 +274,15 @@ def p_expresion(p):
               | opRel
               | opCar
               | opBool
-              | TkId TkCorcheteAbre opAritm TkCorcheteCierra
+              | indice
+              | opArr
+
 	'''
-	p[0] = Nodo("EXPRESION", None, [p[1]])
+
+	if (len(p) == 5):
+		p[0] = Nodo("EXPRESION", p[1]+p[2]+str(p[3])+p[4], [p[3]])
+	else:
+		p[0] = Nodo("EXPRESION", None, [p[1]])
 
 def p_opAritm(p):
 	'''
@@ -300,19 +291,15 @@ def p_opAritm(p):
 		    | expresion TkDiv expresion
 	        | expresion TkMult expresion
 	        | expresion TkMod expresion
-	        | expresion TkConcatenacion expresion
 	        | expresion TkPunto expresion
 			| TkParAbre expresion TkResta expresion TkParCierra
 		    | TkParAbre expresion TkSuma expresion TkParCierra
 		    | TkParAbre expresion TkDiv expresion TkParCierra
 	        | TkParAbre expresion TkMult expresion TkParCierra
 	        | TkParAbre expresion TkMod expresion TkParCierra
-	        | TkParAbre expresion TkConcatenacion expresion TkParCierra
 	        | TkParAbre expresion TkPunto expresion TkParCierra
 	        | TkResta expresion %prec uminus
 	        | TkParAbre TkResta expresion TkParCierra %prec uminus
-	        | TkShift expresion
-	        | TkParAbre TkShift expresion TkParCierra
 
 	'''
 	if (len(p) == 6):
@@ -325,6 +312,23 @@ def p_opAritm(p):
 		p[0] = Nodo("BIN_ARITMETICA", p[2], [p[1], p[3]])
 	#p[0] = (p[1], p[2], p[3])
 
+def p_opArr(p):
+	'''
+	opArr : TkId TkConcatenacion TkId
+          | TkParAbre TkId TkConcatenacion TkId TkParCierra
+          | TkShift TkId
+		  | TkParAbre TkShift TkId TkParCierra
+	'''
+	if (len(p) == 4):
+		p[0] = Nodo("OPERACION ARREGLO", p[2], [p[1], p[3]])
+	elif (len(p) == 6):
+		p[0] = Nodo("OPERACION ARREGLO", p[3], [p[2], p[4]])
+	elif (len(p) == 3):
+		p[0] = Nodo("OPERACION ARREGLO", p[1], [p[2]])
+	else:
+		p[0] = Nodo("OPERACION ARREGLO", p[2], [p[3]])
+
+
 def p_opCar(p):
 	'''
 	opCar : terminal TkSiguienteCar
@@ -332,6 +336,11 @@ def p_opCar(p):
 	      | TkValorAscii terminal
 	      | TkValorAscii terminal TkSiguienteCar
 	      | TkValorAscii terminal TkAnteriorCar
+	      | indice TkSiguienteCar
+		  | indice TkAnteriorCar
+	      | TkValorAscii indice
+	      | TkValorAscii indice TkSiguienteCar
+	      | TkValorAscii indice TkAnteriorCar
 
 	'''
 	if (p[1] == '#'):
@@ -402,8 +411,19 @@ def p_opBool(p):
 
 # Regla para errores
 def p_error(p):
-	print("\nError de sintaxis en la linea", p.lineno + 1, "relacionado con:", p.value)
+	print("\nError de sintaxis en la linea ", p.lineno + 1)
 	sys.exit(0)
+
+def imprimirTermino(nodo, tabs):
+	# Tipo de expresion
+
+	if (len(nodo.hijos) == 0):
+		print(tabs + nodo.tipo)
+		print(tabs + " - Identificador: " + str(nodo.lexeme))
+		print(tabs + " - Tipo: " + str(nodo.type))
+	else:
+		imprimirTermino(nodo.hijos[0], tabs)
+
 
 # Imprimir las expresiones aritmeticas
 def imprimirAritm(nodo, tabs):
@@ -425,16 +445,14 @@ def imprimirAritm(nodo, tabs):
 			if (izq.tipo == "EXPRESION"):
 				imprimirExp(izq, tabs + "\t")
 			elif (izq.tipo == "TERMINO"):
-				print(tabs + "\t" + izq.tipo)
-				print(tabs + "\t" + "Valor: " + str(izq.valor))
+				imprimirTermino(izq, tabs)
 
 			# Operador derecho
 			print(tabs + "- Operador derecho: ")
 			if (der.tipo == "EXPRESION"):
 				imprimirExp(der, tabs + "\t")
 			elif (der.tipo == "TERMINO"):
-				print(tabs + "\t" + der.tipo)
-				print(tabs + "\t" + "- Valor: " + str(der.valor))
+				imprimirTermino(der, tabs)
 
 # Funcion general para imprimir cualquier expresion
 def imprimirExp(nodo, tabs):
@@ -445,10 +463,7 @@ def imprimirExp(nodo, tabs):
 	elif (hijo.tipo == "EXPRESION"):
 		imprimirExp(hijo, tabs)
 	elif (hijo.tipo == "TERMINO"):
-		print(tabs + hijo.tipo)
-		#Aqui hice la prueba de tipos
-		print(tabs + "- Tipo: " + str(hijo.type))
-		print(tabs + "- Valor: " + str(hijo.lexeme))
+		imprimirTermino(hijo, tabs)
 	elif (hijo.tipo == "OPERACION UNARIA"):
 		imprimirUnaria(hijo, tabs)
 	elif (hijo.tipo == "RELACIONAL"):
@@ -457,6 +472,15 @@ def imprimirExp(nodo, tabs):
 		imprimirCaracter(hijo, tabs)
 	elif (hijo.tipo == "BOOLEANA" or hijo.tipo == "BOOLEANA UNARIA"):
 		imprimirBool(hijo, tabs)
+	elif(hijo.tipo == "OPERACION ARREGLO"):
+		imprimirArr(hijo, tabs)
+
+def imprimirArr(nodo, tabs):
+	print(tabs + nodo.tipo)
+	if (len(nodo.hijos) > 0):
+		print(tabs + "- Operacion: " + nodo.valor)
+		for i in nodo.hijos:
+			print(tabs + '- Operador: ' + i)
 
 # Para imprimir exp booleanas
 def imprimirBool(nodo, tabs):
@@ -480,6 +504,8 @@ def imprimirBool(nodo, tabs):
 
 # Para imprimir declaracion de variables
 def imprimirDeclaracion(nodo, tabs):
+	if (nodo.tipo == "DECLARACION"):
+		print(tabs + "TIPO: " + nodo.valor)
 	if (nodo):
 		if (len(nodo.hijos) > 0):
 			for i in nodo.hijos:
@@ -510,8 +536,7 @@ def imprimirCaracter(nodo, tabs):
 		imprimirCaracter(hijo, tabs+"\t")
 	elif (hijo.tipo == "TERMINO"):
 		print(tabs + "- Operador")
-		print(tabs + "\t" + hijo.tipo)
-		print(tabs + "\t" + str(hijo.valor))
+		imprimirTermino(hijo, tabs+"\t")
 
 # Para imprimir expresiones relacionales
 def imprimirRelacional(nodo, tabs):
@@ -528,15 +553,13 @@ def imprimirRelacional(nodo, tabs):
 				imprimirExp(izq, tabs + "\t")
 			elif (izq.tipo == "TERMINO"):
 				print(tabs + "- Operador izquierdo: ")
-				print(tabs + "\t" + izq.tipo)
-				print(tabs + "\t" + "Valor: " + str(izq.valor))
+				imprimirTermino(izq, tabs+"\t")
 
 			if (der.tipo == "EXPRESION"):
 				imprimirExp(der, tabs + "\t")
 			elif (der.tipo == "TERMINO"):
 				print(tabs + "- Operador derecho: ")
-				print(tabs + "\t" + der.tipo)
-				print(tabs + "\t" + "Valor: " + str(der.valor))
+				imprimirTermino(der, tabs+"\t")
 
 # Para imprimir ciclos for
 def imprimirIterDeter(nodo, tabs):
@@ -547,14 +570,12 @@ def imprimirIterDeter(nodo, tabs):
 	print(tabs + "- Identificador: " + nodo.valor[0])
 	print(tabs + "- Limite inferior: ")
 	if (inf.tipo == "TERMINO"):
-		print(tabs + "\t" + inf.tipo)
-		print(tabs + "\t" + str(inf.valor))
+		imprimirTermino(inf, tabs+"\t")
 	elif (inf.tipo == "BIN_ARITMETICA"):
 		imprimirAritm(inf, tabs + "\t")
 	print(tabs + "- Limite superior: ")
 	if (sup.tipo == "TERMINO"):
-		print(tabs + "\t" + sup.tipo)
-		print(tabs + "\t" + str(sup.valor))
+		imprimirTermino(sup, tabs+"\t")
 	elif (sup.tipo == "BIN_ARITMETICA"):
 		imprimirAritm(sup, tabs + "\t")
 	print(tabs + "- Step: ")
@@ -563,8 +584,7 @@ def imprimirIterDeter(nodo, tabs):
 		print(tabs + "\t" + step)
 	else:	
 		if (step.tipo == "TERMINO"):
-			print(tabs + "\t" + step.tipo)
-			print(tabs + "\t" + str(step.valor))
+			imprimirTermino(step, tabs+"\t")
 		elif (step.tipo == "BIN_ARITMETICA"):
 			imprimirAritm(step, tabs + "\t")
 	print(tabs + "- Operaciones")
@@ -576,8 +596,7 @@ def imprimirUnaria(nodo, tabs):
 	print(tabs + "Operacion: " + nodo.valor)
 	print(tabs + "Operador: ")
 	if (nodo.hijos[0].tipo == "TERMINO"):
-		print(tabs + "\t" + "TERMINO")
-		print(tabs + "\t" + str(nodo.hijos[0].valor))
+		imprimirTermino(nodo.hijos[0], tabs+"\t")
 	elif (nodo.hijos[0].tipo == "OPERACION UNARIA"):
 		imprimirUnaria(nodo.hijos[0], tabs + "\t")
 	elif (nodo.hijos[0].tipo == "EXPRESION"):
@@ -588,7 +607,12 @@ def imprimirUnaria(nodo, tabs):
 # Para asignaciones
 def imprimirAsig(nodo, tabs):
 	print(tabs + nodo.tipo)
-	print(tabs + "Identificador: " + nodo.valor)
+	if (isinstance(nodo.valor, str)):
+		print(tabs + "Identificador: " + nodo.valor)
+	else:
+		print(tabs + "Identificador: " + nodo.valor.valor)
+
+
 	print(tabs + "Valor: ")
 
 	imprimirExp(nodo.hijos[0], tabs + "\t")
@@ -597,7 +621,7 @@ def imprimirAsig(nodo, tabs):
 def imprimirCond(nodo, tabs):
 	print(tabs + nodo.tipo)
 	print(tabs + "- Guardia")
-	imprimirBool(nodo.hijos[0], tabs + "\t")
+	imprimirArbol(nodo.hijos[0], tabs + "\t")
 	if (len(nodo.hijos) == 3):
 		print(tabs + "- Exito")
 		imprimirArbol(nodo.hijos[1], tabs + "\t")
@@ -610,8 +634,8 @@ def imprimirCond(nodo, tabs):
 # Para entradas
 def imprimirEntrada(nodo, tabs):
 	print(tabs + nodo.tipo)
-	print(tabs + "- Operador: " + nodo.valor)
-	print(tabs + "-Identificador: " + nodo.hijos[0])
+	print(tabs + "- Operador: read")
+	print(tabs + "-Identificador: " + nodo.valor)
 
 # Para salidas
 def imprimirSalida(nodo, tabs):
@@ -693,15 +717,13 @@ def main():
 			n = n + 1
 
 	p = parser.parse(program)
-	print("SECUENCIACION")
-	s = "\t"
-	imprimirArbol(p, s)
-'''
-	#print("SECUENCIACION")
-	s = "\t"
+
 
 	c = context()
 	c.contextCheck(p)
+	c.imprimirTabla()
+	print("SECUENCIACION")
+	s = "\t"
 	imprimirArbol(p, s)
-'''
+
 main()

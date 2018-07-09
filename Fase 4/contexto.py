@@ -5,6 +5,8 @@ class context:
 	def __init__(self):
 		# Inicializar pila de scopes (variables declaradas para cada bloque)
 		self.scopes = []
+		self.auxScopes = []
+		self.linea = 1
 
 	def contextCheck(self, ast):
 
@@ -15,20 +17,24 @@ class context:
 				for nodo in ast.hijos:
 
 					if (nodo.tipo == 'BLOQUE'):
+						self.linea += 1
 						self.contextCheck(nodo)
 
 						# Removemos el top de la pila al terminar con este bloque
 						self.scopes.pop(0)
 
 					elif (nodo.tipo == 'DECLARACION'):
+						self.linea += 1
 						# Creamos nuevo scope (por ahora vacio)
 						scope = {}
 						# Insertamos nuevo scope en la cabeza de la pila
 						self.scopes.insert(0, scope)
 						self.nuevoScope(nodo)
+						self.auxScopes.append(self.scopes[0])
 
 
 					elif (nodo.tipo == 'ASIGNACION'):
+						self.linea += 1
 						# Si encontramos una operacion de tipo Asignacion, chequear que
 						# la variable ha sido declarada y que el tipo concuerde
 
@@ -36,21 +42,24 @@ class context:
 						if (isinstance(nodo.valor, str)):
 							var = self.checkVar(nodo.valor)
 							if (var.contador):
-								print("se trata de modificar la variable que pertenece a una iteracion.")
+								print("Error linea " + str(self.linea) + ". Se trata de modificar la variable" + nodo.valor + "que pertenece a una iteracion.")
 								sys.exit(0)
 							var = var.tipo
 						else:
 							var = self.getTipoId(nodo.valor)
+							# chequear si el hijo tambien es un arreglo
+							
 
 						# Si la var es de un arreglo chequear que el indice es de tipo entero
 						tpe = self.checkExp(nodo.hijos[0])
 
 						if (var != tpe):
-							print("Error de contexto. Tipo incorrectos.")
+							print("Error linea " + str(self.linea) + ". Las variables son de tipos distintos.")
 							sys.exit(0)
 
 					
 					elif(nodo.tipo == 'CONDICIONAL'):
+						self.linea += 1
 
 						for h in nodo.hijos:
 
@@ -62,10 +71,11 @@ class context:
 								t = self.checkExp(h)
 
 								if (t != 'bool'):
-									print("Error de contexto. Tipo incorrectos.")
+									print("Error linea " + str(self.linea) + ". Las variables son de tipos distintos.")
 									sys.exit(0)
 
 					elif (nodo.tipo == 'ITERACION INDETERMINADA'):
+						self.linea += 1
 						hijo = nodo.valor
 						op1 = hijo.hijos[0]
 						op2 = hijo.hijos[1]
@@ -75,23 +85,24 @@ class context:
 
 						if (hijo.valor != '/=' and hijo.valor != '='):
 							if (tipo1 != 'int' or tipo2 != 'int'):
-								print('Error de contexto. Tipo incorrecto relacional.')
+								print("Error linea " + str(self.linea) + ". Las variables son de tipo incorrecto.")
 								sys.exit(0)
 
 
 						if (tipo1 != tipo2):
-							print('Error de contexto. Tipo incorrecto relacional.')
+							print("Error linea " + str(self.linea) + ". Las variables son de tipo incorrecto.")
 							sys.exit(0)
 						else:
 							t = 'bool'
 						
 						if (t != 'bool'):
-							print("Error de contexto. Tipo incorrectos.")
+							print("Error linea " + str(self.linea) + ". Las variables son de tipo incorrecto.")
 							sys.exit(0)
 						
 						self.contextCheck(nodo.hijos[0])
 
 					elif (nodo.tipo == 'ITERACION DETERMINADA'):
+						self.linea += 1
 
 						# agregar atributo a la var de iteracion, set to true 
 						# al salir de los hijos del ciclo set to false
@@ -108,7 +119,7 @@ class context:
 						tipoSup = self.checkExp(limSup)
 
 						if (tipoSup != tipoInf != 'int'):
-							print('Error de contexto. Rangos del ciclo no son enteros.')
+							print("Error linea " + str(self.linea) +'. Rangos del ciclo no son enteros.')
 							sys.exit(0)
 
 						step = nodo.valor[3]
@@ -123,37 +134,52 @@ class context:
 								t = self.checkExp(step)
 
 							if (t != 'int'):
-								print('Error de contexto.')
+								print("Error linea " + str(self.linea) + ". Las variables son de tipo incorrecto.")
 								sys.exit(0)
-
-
-
 
 						# Insertamos nuevo scope en la cabeza de la pila
 						self.scopes.insert(0, scope)
 
-
-
 						self.contextCheck(nodo.hijos[0])
-						
-						# set aqui
+						self.auxScopes.append(self.scopes[0])
 						self.scopes.pop(0)
 					else:
+						if (nodo.tipo=='ENTRADA' or nodo.tipo=='SALIDA'):
+							self.linea += 1
 						self.contextCheck(nodo)
+
+	def checkIfArray(self, var):
+		if (len(var.hijos)>0):
+			for h in var.hijos:
+				self.checkIfArray(h)
+		else:
+			t = self.checkVar(var.lexeme)
+			if (t.arreglo):
+				return True
+			else:
+				return False
+
+	def imprimirTabla(self):
+		print('TABLA DE SIMBOLOS')
+		tabs = ''
+		for scope in self.auxScopes:
+			for var in scope:
+				print(tabs + var + ': ' + scope[var].tipo)
+			tabs = tabs + '\t'
+
 
 	def checkTipoArrOfArr(self,arr):
 		# Cheuqear tipo del indice
+		if (arr.arreglo == None):
+			print("Error linea " + str(self.linea) +'. no es un arreglo.')
+			sys.exit(0)
 		t = self.getTipoId(arr.arreglo)
 		if (t != 'int'):
-			print('Error de contexto. Tipo incorrecto para indice del arreglo.')
+			print("Error linea " + str(self.linea) +'. Tipo incorrecto para indice del arreglo.')
 			sys.exit(0)
 		if (len(arr.hijos)>0):
 			for i in arr.hijos:
 				self.checkTipoArrOfArr(i)
-
-		#chequear var del arreglo
-
-		#chequear indice del arreglo
 
 
 	def getTipoId(self, indice):
@@ -170,38 +196,34 @@ class context:
 				for hijo in indice.hijos:
 					tipoIndex = self.getTipoId(hijo)
 					if (tipoIndex != 'int'):
-						print('Error de contexto. Tipo incorrecto para indice del arreglo.')
+						print("Error linea " + str(self.linea) +'. Tipo incorrecto para indice del arreglo.')
 						sys.exit(0)
 			else:
 				return indice.type
 		elif (indice.tipo == 'VAR_ARREGLO'):
+
 			t = self.checkVar(indice.valor)
+			if (not t.arreglo):
+				print("Error linea " + str(self.linea) +'.' + t.valor + ' no es un arreglo')
+				sys.exit(0)
+
 			for hijo in indice.hijos:
 				tipoIndex = self.getTipoId(hijo)
 
 			if (t.tipo != tipoIndex != 'int'):
-				print('Error de contexto. Tipo incorrecto para indice del arreglo.')
+				print("Error linea " + str(self.linea) +'. Tipo incorrecto para indice del arreglo.')
 				sys.exit(0)
 
 			return t.tipo
 
 
-
-	def getTipo(self, arr):
-		# Recorremos los hijos del arreglo
-		# (pues puede ser un arreglo de arreglos)
-		if (len(arr.hijos) > 0):
-			for i in arr.hijos:
-				tipo = self.getTipo(i)
-				return tipo
-		# Cuando el arreglo no tenga mas hijos, en valor estara guardado el tipo
-		else:
-			return arr.valor
-
 	def nuevoScope(self, dec):
 
 		# Tipo de la declaracion
 		tipo = dec.valor
+		arreglo = False
+		if (tipo == 'arreglo'):
+			arreglo = True
 
 		# Los hijos de una variable pueden ser un conjunto de variables, un arreglo
 		# u otra declaracion
@@ -214,21 +236,38 @@ class context:
 				# Si es un arreglo tambien hay que chequear el tamaño
 				# sea de tipo entero
 				self.checkTipoArrOfArr(k)
+				
 
 			elif (k.tipo == 'DECLARACION'):
+				self.linea += 1
 				self.nuevoScope(k)
 
 			elif (k.tipo == 'VARIABLE'):
-				self.agregarSimbolo(k, tipo)
+				self.agregarSimbolo(k, tipo, arreglo)
 				
-
+	def getTipo(self, arr):
+		# Recorremos los hijos del arreglo
+		# (pues puede ser un arreglo de arreglos)
+		if (len(arr.hijos) > 0):
+			for i in arr.hijos:
+				tipo = self.getTipo(i)
+				return tipo
+		# Cuando el arreglo no tenga mas hijos, en valor estara guardado el tipo
+		else:
+			return arr.valor
 		
-	def agregarSimbolo(self, var, tipo):
+	def agregarSimbolo(self, var, tipo, arr):
 		
 		# scope actual
 		top = self.scopes[0]
+		# chequeeemos que la variable no esta siendo redeclarada
+
+		if var.valor in top:
+			print("Error linea " + str(self.linea) +'. Variable ya declarada.')
+			sys.exit(0)
 		# Construimos objeto simbolo
 		variable = simbolo(var.valor, tipo)
+		variable.arreglo = arr
 		# Agregamos simbolo a la tabla
 		top[var.valor] = variable
 
@@ -236,11 +275,11 @@ class context:
 		if ((len(var.hijos))>0):
 			for i in var.hijos:
 				if (i.tipo == 'VARIABLE'):
-					self.agregarSimbolo(i, tipo)
+					self.agregarSimbolo(i, tipo, arr)
 				elif (i.tipo == 'EXPRESION'):
-					t = checkExp(i)
+					t = self.checkExp(i)
 					if (t != tipo):
-						print('Error de contexto. Tipo incorrecto.')
+						print("Error linea " + str(self.linea) + 'Los tipos de la variables y la asignacion no coinciden.')
 						sys.exit(0)
 					else:
 						top[var.valor].asignado = i
@@ -259,7 +298,7 @@ class context:
 				tipo1 = self.checkExp(op1)
 				tipo2 = self.checkExp(op2)
 				if (tipo1 != tipo2 != 'bool'):
-					print('Error de contexto. Tipo incorrecto booleana.')
+					print("Error linea " + str(self.linea) + '. Tipo incorrecto operacion booleana.')
 					sys.exit(0)
 				else:
 					return 'bool'
@@ -274,12 +313,12 @@ class context:
 
 				if (hijo.valor != '/=' and hijo.valor != '='):
 					if (tipo1 != 'int' or tipo2 != 'int'):
-						print('Error de contexto. Tipo incorrecto relacional.')
+						print("Error linea " + str(self.linea) +'. Tipo incorrecto operacion relacional.')
 						sys.exit(0)
 
 
 				if (tipo1 != tipo2):
-					print('Error de contexto. Tipo incorrecto relacional.')
+					print("Error linea " + str(self.linea) +'. Tipo incorrecto operacion relacional.')
 					sys.exit(0)
 				else:
 					return "bool"
@@ -290,7 +329,7 @@ class context:
 				tipo1 = self.checkExp(op1)
 				tipo2 = self.checkExp(op2)
 				if (tipo1 != tipo2 != 'int'):
-					print('Error de contexto. Tipo incorrecto aritmetica.')
+					print("Error linea " + str(self.linea) +'. Tipo incorrecto operacion aritmetica.')
 					sys.exit(0)
 				else:
 					return 'int'
@@ -298,7 +337,7 @@ class context:
 				op = hijo.hijos[0]
 				tipo = self.checkExp(op)
 				if (tipo != 'bool'):                    
-					print('Error de contexto. Tipo incorrecto booleana unaria.')
+					print("Error linea " + str(self.linea) +'. Tipo incorrecto booleana unaria.')
 				else:
 					return "bool"
 
@@ -306,33 +345,69 @@ class context:
 				op = hijo.hijos[0]
 				tipo = self.checkExp(op)
 				if (tipo != 'int'):
-					print('Error de contexto. Tipo incorrecto aritmetica unaria.')
+					print("Error linea " + str(self.linea) +'. Tipo incorrecto aritmetica unaria.')
 
 			elif(hijo.tipo == "OPERACION CARACTER"):
 			
 				t = self.checkExp(hijo)
 				if (t != 'char'):
-					print('Error de contexto. Tipo incorrecto caracter.')
+					print("Error linea " + str(self.linea) +'. Tipo incorrecto caracter.')
 					sys.exit(0)
 				else:
 					return 'char'
-			elif(hijo.tipo == 'TERMINO'):
-				if (hijo.type == 'var'):
-					
-					t = self.checkVar(hijo.lexeme)
+			elif (hijo.tipo == 'OPERACION ARREGLO'):
+				
+				# puedo tener 1 o 2 hijos
+				# chequear que los hijos sean del mismo tipo
+				if (len(hijo.hijos)>1):
+					op1 = hijo.hijos[0]
+					op2 = hijo.hijos[1]
 
-					return t.tipo
+					tipo1 = self.checkVar(op1)
+					tipo2 = self.checkVar(op2)
+					if (not tipo1.arreglo or not tipo2.arreglo):
+						print("Error linea " + str(self.linea) +'. No son arreglos')
+						sys.exit(0)
+
+					if (tipo1.tipo != tipo2.tipo):
+						print("Error linea " + str(self.linea) +'. Tipo incorrecto operacion con arreglos')
+						sys.exit(0)
+					else:
+						return tipo1.tipo
 				else:
-					return hijo.type
+					h = hijo.hijos[0]
+					t = self.checkVar(h)
+					if (not t.arreglo):
+						print("Error linea " + str(self.linea) +'. Tipo incorrecto operacion con arreglos')
+						sys.exit(0)
+					return t.tipo
+
+			elif(hijo.tipo == 'TERMINO'):
+				if (len(hijo.hijos)>0):
+					for h in hijo.hijos:
+						t = self.checkExp(h)
+						return t
+				else:
+					if (hijo.type == 'var'):
+						
+						t = self.checkVar(hijo.lexeme)
+
+						return t.tipo
+					else:
+						return hijo.type
 			
 			elif(hijo.tipo == 'VAR_ARREGLO'):
 				# Chequear que indices son correctos
 				index = self.getTipoId(hijo.hijos[0])
 				if (index != 'int'):
-					print('Error de contexto. Tipo incorrecto indice.')
+					print("Error linea " + str(self.linea) +'. El indice de un arreglo debe ser entero.')
 					sys.exit(0)
 				#retorna tipo del arreglo
 				t = self.checkVar(hijo.valor)
+
+				if (not t.arreglo):
+					print("Error linea " + str(self.linea) +'.' + t.valor + ' no es un arreglo')
+					sys.exit(0)
 
 				return t.tipo
 
@@ -343,22 +418,14 @@ class context:
 		# chequea que una variable exista en los scopes y devuelve su tipo
 		# si no retorna, none
 
-		# chequeeemos que la variable no esta siendo redeclarada
-		top = self.scopes[0]
+		if (len(self.scopes) > 0):
 
-		if var in top:
-			print('Error. Variable ya declarada.')
-			sys.exit(0)
-
-		for i in range(len(self.scopes)):
-			if var in self.scopes[i]:
-				return self.scopes[i][var]
+			for i in range(len(self.scopes)):
+				if var in self.scopes[i]:
+					return self.scopes[i][var]
 		
-		print('Error de contexto. Variable ' + var + ' no declarada.')
+		print("Error linea " + str(self.linea) +'. Variable ' + var + ' no declarada.')
 		sys.exit(0)
-
-
-
 
 
 class simbolo():
@@ -367,31 +434,5 @@ class simbolo():
 		self.valor = val # identificador o valor de la variable
 		self.asignado = None # valor del simbolo en caso de que se trate de una var
 		self.contador = None # para chequear si una variable esta siendo usada como contador
-
-
-
-
-
-# Arreglar funcion de error del parser
-# Extender el AST con informacion de los tipos
-# Crear pila de scopes
-# Un scope es un diccionario (tabla de hash)
-# Recorrer AST y cada vez que encuentre una declaracion crear un scope nuevo
-# Agregar variables de la declaracion al scope
-	# Si se hace una asignacion en la declaracion: chequear que los tipos 
-	# de la operacion sean correctos, si no error de contexto
-# Agregar scope al top de la pila
-# Para cualquier operacion dentro del bloque actual en el AST: chequear
-# que los tipos sean correctos para las operaciones y que las varibles usadas
-# esten en alguno de los scopes de la pila (que esten declaradas), si no error de contexto.
-	# Chequear arreglos
-	# Chequear asignaciones
-	# Expresiones
-	# Operaciones
-# Una vez se llegue al final del bloque, remover el scope de la pila.
-
-
-# DUDA: si se hace una asignacion dentro de un bloque a una variable declarada en un 
-# bloque mas externo. Ese valor asignado queda guardado de forma global?
-
+		self.arreglo = False
 
