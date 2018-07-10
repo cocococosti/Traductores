@@ -1,0 +1,9 @@
+with var num,a<-true: bool
+var i:int
+var b:char
+begin
+	i <- 1;
+	a <- false;
+    num <- a /\ (not false \/ not false);
+    b <- 'a'++;
+end

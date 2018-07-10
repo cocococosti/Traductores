@@ -15,6 +15,7 @@ from sys import argv
 import sys
 from arbol import *
 from contexto import *
+from evaluacion import *
 
 # Lista de precedencias 
 precedence = (
@@ -239,8 +240,7 @@ def p_output(p):
 def p_iteracionind(p):
     '''
     
-    iterInd : TkWhile opRel TkHacer cuerpo TkEnd
-            | TkWhile opBool TkHacer cuerpo TkEnd
+    iterInd : TkWhile expresion TkHacer cuerpo TkEnd
     '''
     
     p[0] = Nodo("ITERACION INDETERMINADA", p[2], [p[4]])
@@ -648,10 +648,7 @@ def imprimirSalida(nodo, tabs):
 def imprimirIndeter(nodo, tabs):
 	print(tabs + nodo.tipo)
 	print(tabs + "- Guardia: ")
-	if (nodo.valor.tipo == "RELACIONAL"):
-		imprimirRelacional(nodo.valor, tabs + "\t")
-	else:
-		imprimirBool(nodo.valor, tabs + "\t")
+	imprimirExp(nodo.valor, tabs + "\t")
 	print(tabs + "- Exito: ")
 	imprimirArbol(nodo.hijos[0], tabs + "\t")
 
@@ -721,9 +718,11 @@ def main():
 
 	c = context()
 	c.contextCheck(p)
-	c.imprimirTabla()
-	print("SECUENCIACION")
-	s = "\t"
-	imprimirArbol(p, s)
+	#c.imprimirTabla()
+	#print("SECUENCIACION")
+	#s = "\t"
+	#imprimirArbol(p, s)
+	e = evaluacion(c.scopes)
+	e.evalArbol(p)
 
 main()

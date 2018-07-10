@@ -76,28 +76,34 @@ class context:
 
 					elif (nodo.tipo == 'ITERACION INDETERMINADA'):
 						self.linea += 1
-						hijo = nodo.valor
-						op1 = hijo.hijos[0]
-						op2 = hijo.hijos[1]
 
-						tipo1 = self.checkExp(op1)
-						tipo2 = self.checkExp(op2)
-
-						if (hijo.valor != '/=' and hijo.valor != '='):
-							if (tipo1 != 'int' or tipo2 != 'int'):
-								print("Error linea " + str(self.linea) + ". Las variables son de tipo incorrecto.")
-								sys.exit(0)
-
-
-						if (tipo1 != tipo2):
-							print("Error linea " + str(self.linea) + ". Las variables son de tipo incorrecto.")
+						guardia = self.checkExp(nodo.valor)
+						if (guardia != 'bool'):
+							print("Error linea " + str(self.linea) + ". Las variables en la guardia son de tipo incorrecto.")
 							sys.exit(0)
-						else:
-							t = 'bool'
+
+						# hijo = nodo.valor
+						# op1 = hijo.hijos[0]
+						# op2 = hijo.hijos[1]
+
+						# tipo1 = self.checkExp(op1)
+						# tipo2 = self.checkExp(op2)
+
+						# if (hijo.valor != '/=' and hijo.valor != '='):
+						# 	if (tipo1 != 'int' or tipo2 != 'int'):
+						# 		print("Error linea " + str(self.linea) + ". Las variables son de tipo incorrecto.")
+						# 		sys.exit(0)
+
+
+						# if (tipo1 != tipo2):
+						# 	print("Error linea " + str(self.linea) + ". Las variables son de tipo incorrecto.")
+						# 	sys.exit(0)
+						# else:
+						# 	t = 'bool'
 						
-						if (t != 'bool'):
-							print("Error linea " + str(self.linea) + ". Las variables son de tipo incorrecto.")
-							sys.exit(0)
+						# if (t != 'bool'):
+						# 	print("Error linea " + str(self.linea) + ". Las variables son de tipo incorrecto.")
+						# 	sys.exit(0)
 						
 						self.contextCheck(nodo.hijos[0])
 
@@ -190,16 +196,38 @@ class context:
 
 		# Obtengamos tipo del indice
 		if (indice.tipo == 'BIN_ARITMETICA'):
-			tipoIndex = self.checkExp(indice)
+			hijo1 = indice.hijos[0]
+			hijo2 = indice.hijos[1]
+			if (hijo1.tipo == 'TERMINO'):
+				tipo1 = hijo1.type
+			else:
+				tipo1 = self.checkExp(hijo1)
+			if (hijo2.tipo == 'TERMINO'):
+				tipo2 = hijo2.type
+			else:
+				tipo2 = self.checkExp(hijo2)
+			
+			if (tipo1 != 'int' or tipo2 != 'int'):
+				print("Error linea " + str(self.linea) +'. Tipo incorrecto para indice del arreglo.')
+				sys.exit(0)
+			else:
+				return tipo1
+
 		elif (indice.tipo == 'TERMINO'):
 			if (len(indice.hijos) > 0):
 				for hijo in indice.hijos:
 					tipoIndex = self.getTipoId(hijo)
+
 					if (tipoIndex != 'int'):
 						print("Error linea " + str(self.linea) +'. Tipo incorrecto para indice del arreglo.')
 						sys.exit(0)
+					return tipoIndex
 			else:
-				return indice.type
+				if (indice.type == 'var'):
+					tipoIndex = self.checkVar(indice.lexeme).tipo
+				else:
+					tipoIndex = indice.type
+				return tipoIndex
 		elif (indice.tipo == 'VAR_ARREGLO'):
 
 			t = self.checkVar(indice.valor)
@@ -328,7 +356,12 @@ class context:
 				op2 = hijo.hijos[1]
 				tipo1 = self.checkExp(op1)
 				tipo2 = self.checkExp(op2)
-				if (tipo1 != tipo2 != 'int'):
+
+
+				if (tipo1 != tipo2):
+					print("Error linea " + str(self.linea) +'. Tipo incorrecto operacion aritmetica.')
+					sys.exit(0)
+				elif (tipo1 != 'int'):
 					print("Error linea " + str(self.linea) +'. Tipo incorrecto operacion aritmetica.')
 					sys.exit(0)
 				else:
@@ -354,7 +387,10 @@ class context:
 					print("Error linea " + str(self.linea) +'. Tipo incorrecto caracter.')
 					sys.exit(0)
 				else:
-					return 'char'
+					if (hijo.valor == '#'):
+						return 'int'
+					else:
+						return 'char'
 			elif (hijo.tipo == 'OPERACION ARREGLO'):
 				
 				# puedo tener 1 o 2 hijos
@@ -428,6 +464,7 @@ class context:
 		sys.exit(0)
 
 
+
 class simbolo():
 	def __init__(self, val, t):
 		self.tipo = t # tipo de la variable
@@ -435,4 +472,5 @@ class simbolo():
 		self.asignado = None # valor del simbolo en caso de que se trate de una var
 		self.contador = None # para chequear si una variable esta siendo usada como contador
 		self.arreglo = False
+		self.res = None # valor de la variable
 
