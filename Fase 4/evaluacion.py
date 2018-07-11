@@ -13,7 +13,13 @@ class evaluacion():
 						if (nodo.tipo == 'ASIGNACION'):
 							var = nodo.valor
 							value = self.evalExp(nodo.hijos[0])
-							self.setValor(var, value)
+							if (isinstance(var, str)):
+								self.setValor(var, value)
+							else:
+								indice = self.evalExp(var.hijos[0])
+								self.setValor(var.valor, value, indice)
+
+								
 
 						elif (nodo.tipo == 'VARIABLE'):
 							for i in nodo.hijos:
@@ -27,6 +33,17 @@ class evaluacion():
 							for i in nodo.hijos:
 
 								self.evalArbol(i)
+
+						elif (nodo.tipo == 'SALIDA'):
+							val = self.evalExp(nodo.hijos[0])
+							print(val)
+
+						elif (nodo.tipo == 'ENTRADA'):
+							val = input()
+							var = nodo.valor
+
+							# chequear que la entrada del user sea del tipo correcto (int, bool, char)
+							# arreglar contexto, debe chequear que la var a leer este declarada!
 							
 						else:
 							self.evalArbol(nodo)
@@ -39,6 +56,7 @@ class evaluacion():
 			else:
 
 				if (exp.type == 'var'):
+
 					t = self.getValor(exp.lexeme)
 					return t
 				else:
@@ -104,31 +122,109 @@ class evaluacion():
 				else:
 					return chr(ord(op)-1)
 
+		elif (exp.tipo == 'BIN_ARITMETICA'):
+			operacion = exp.valor
+			op1 = self.evalExp(exp.hijos[0])
+			op2 = self.evalExp(exp.hijos[1])
+			if (operacion == '+'):
+				res = op1 + op2
+			elif (operacion == '-'):
+				res = op1 - op2
+			elif (operacion == '*'):
+				res = op1 * op2
+			elif (operacion == '/'):
+				if (op2 == 0):
+					print("Error division por cero")
+					sys.exit(0)
+				else:
+					res = op1 / op2
+				
+			elif (operacion == '%'):
+				res = op1 % op2
+			
+			return int(res)
+		
+		elif (exp.tipo == 'OPERACION UNARIA'):
+			op = self.evalExp(exp.hijos[0])
+			return -op
+
 		elif(exp.tipo == 'EXPRESION'):
 			t = self.evalExp(exp.hijos[0])
 
+		elif(exp.tipo == 'VAR_ARREGLO'):
+			indice = self.evalExp(exp.hijos[0])
+			v = self.getValor(exp.valor, indice)
+			return v
+
+		elif (exp.tipo == 'OPERACION ARREGLO'):
+			if (len(exp.hijos)==2):
+				op1 = self.evalExp(exp.hijos[0])
+				op2 = self.evalExp(exp.hijos[1])
+				res = op1.extend(op2)
+				return res
+			else:
+				op = self.evalExp(exp.hijos[0])
+
+
 		return t
 
-	def setValor(self, var, val):
+	def setValor(self, var, val, index=None):
 		if (len(self.tabla) > 0):
 
 			for i in range(len(self.tabla)):
 				if var in self.tabla[i]:
-					self.tabla[i][var].res = val
+					if (index):
+						if (index > self.evalExp(self.tabla[i][var].size)):
+							print("Error. Indice excede tamaño del arreglo.")
+							sys.exit(0)
+						elif (index < 0):
+							print("Error. Indice no puede ser negativo.")
+							sys.exit(0)
+						else:
+							if (len(self.tabla[i][var].res)==0):
+								for n in range(self.evalExp(self.tabla[i][var].size)):
+									self.tabla[i][var].res.append(None)
 
-	def getValor(self, var):
+							if (isinstance(val, list)):
+								if (not self.tabla[i][var].arreglo):
+									print("Error. No se puede asignar arreglo a entero.")
+									sys.exit(0)
+							self.tabla[i][var].res[index] = val
+					else:
+						if (isinstance(val, list)):
+							if (not self.tabla[i][var].arreglo):
+								print("Error. No se puede asignar arreglo a entero.")
+								sys.exit(0)
+						self.tabla[i][var].res = val
+
+	def getValor(self, var, index=None):
 		val = None
 		if (len(self.tabla) > 0):
 
 			for i in range(len(self.tabla)):
 				if var in self.tabla[i]:
-					val = self.tabla[i][var].res
+					if (index):
+						if (self.tabla[i][var].arreglo):
+							if (index < 0):
+								print("Error. Indice no puede ser negativo.")
+								sys.exit(0)
 
-		if (val):
+							if (len(self.tabla[i][var].res)!=0):
+
+								val = self.tabla[i][var].res[index]
+						else:
+							print("Error. Variable no es un arreglo.")
+							sys.exit(0)
+					else:	
+						val = self.tabla[i][var].res
+
+
+		if (val != None):
 			return val
 		else:
 			print("Error. Variable " + var + " no inicializada.")
 			sys.exit(0)
+
 
 
 

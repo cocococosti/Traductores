@@ -253,6 +253,7 @@ class context:
 		if (tipo == 'arreglo'):
 			arreglo = True
 
+		tam = None
 		# Los hijos de una variable pueden ser un conjunto de variables, un arreglo
 		# u otra declaracion
 		for k in dec.hijos:
@@ -264,6 +265,8 @@ class context:
 				# Si es un arreglo tambien hay que chequear el tamaño
 				# sea de tipo entero
 				self.checkTipoArrOfArr(k)
+
+				tam = k.arreglo
 				
 
 			elif (k.tipo == 'DECLARACION'):
@@ -271,7 +274,7 @@ class context:
 				self.nuevoScope(k)
 
 			elif (k.tipo == 'VARIABLE'):
-				self.agregarSimbolo(k, tipo, arreglo)
+				self.agregarSimbolo(k, tipo, arreglo, tam)
 				
 	def getTipo(self, arr):
 		# Recorremos los hijos del arreglo
@@ -284,7 +287,7 @@ class context:
 		else:
 			return arr.valor
 		
-	def agregarSimbolo(self, var, tipo, arr):
+	def agregarSimbolo(self, var, tipo, arr, tam=None):
 		
 		# scope actual
 		top = self.scopes[0]
@@ -294,7 +297,7 @@ class context:
 			print("Error linea " + str(self.linea) +'. Variable ya declarada.')
 			sys.exit(0)
 		# Construimos objeto simbolo
-		variable = simbolo(var.valor, tipo)
+		variable = simbolo(var.valor, tipo, tam)
 		variable.arreglo = arr
 		# Agregamos simbolo a la tabla
 		top[var.valor] = variable
@@ -379,6 +382,8 @@ class context:
 				tipo = self.checkExp(op)
 				if (tipo != 'int'):
 					print("Error linea " + str(self.linea) +'. Tipo incorrecto aritmetica unaria.')
+				else:
+					return 'int'
 
 			elif(hijo.tipo == "OPERACION CARACTER"):
 			
@@ -466,11 +471,14 @@ class context:
 
 
 class simbolo():
-	def __init__(self, val, t):
+	def __init__(self, val, t, tam=None):
 		self.tipo = t # tipo de la variable
 		self.valor = val # identificador o valor de la variable
 		self.asignado = None # valor del simbolo en caso de que se trate de una var
 		self.contador = None # para chequear si una variable esta siendo usada como contador
 		self.arreglo = False
 		self.res = None # valor de la variable
+		if (tam):
+			self.size = tam
+			self.res = []
 

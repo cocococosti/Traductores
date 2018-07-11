@@ -1,9 +1,13 @@
 with var num,a<-true: bool
+var cat,m : array [2+(2*3)] of int
 var i:int
 var b:char
 begin
-	i <- 1;
+	cat[2*3] <- 4/(-2-2);
+	cat <-cat::m;
 	a <- false;
     num <- a /\ (not false \/ not false);
     b <- 'a'++;
+    print cat[2*3];
+    read c;
 end
