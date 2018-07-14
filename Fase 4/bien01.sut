@@ -4,7 +4,7 @@ begin
     print eq;
     with
     	var p : bool
-        var a : array [i[i]] of bool
+        var a : array [i] of bool
     begin
     	p <- true;
     end

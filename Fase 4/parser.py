@@ -194,8 +194,8 @@ def p_condicional(p):
 
 
 	'''
-	if (len(p) == 8):
-		p[0] = Nodo("CONDICIONAL", None, [p[2], p[4], p[6]])
+	if (len(p) == 9):
+		p[0] = Nodo("CONDICIONAL", None, [p[2], p[4], p[7]])
 	else:
 		p[0] = Nodo("CONDICIONAL", None, [p[2], p[4]])
 
@@ -218,8 +218,14 @@ def p_indice(p):
 	indice : TkId TkCorcheteAbre terminal TkCorcheteCierra
 	       | TkId TkCorcheteAbre opAritm TkCorcheteCierra
 	       | TkId TkCorcheteAbre indice TkCorcheteCierra
+	       | opArr TkCorcheteAbre terminal TkCorcheteCierra
+	       | opArr TkCorcheteAbre opAritm TkCorcheteCierra
+	       | opArr TkCorcheteAbre indice TkCorcheteCierra
 	'''
-	p[0] = Nodo("VAR_ARREGLO", p[1], [p[3]])
+	if (isinstance(p[1],str)):
+		p[0] = Nodo("VAR_ARREGLO", p[1], [p[3]])
+	else:
+		p[0] = Nodo("VAR_ARREGLO", p[1].hijos[0], [p[3]])
 	p[0].arreglo = p[1]
 
 # Entrada

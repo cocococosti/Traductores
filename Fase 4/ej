@@ -1,13 +1,21 @@
-with var num,a<-true: bool
-var cat,m : array [2+(2*3)] of int
+with var num,a<-false: bool
+var r : array [4] of array[3] of int
+var m,cat : array [3] of int
 var i:int
 var b:char
 begin
-	cat[2*3] <- 4/(-2-2);
-	cat <-cat::m;
-	a <- false;
-    num <- a /\ (not false \/ not false);
-    b <- 'a'++;
-    print cat[2*3];
-    read c;
+	cat[1] <- 4/(-2-2);
+	m[0]<- 1;
+	i<-0;
+	m[1]<- cat[1];
+	m <- $m;
+	print ($m)[0];
+	r[1] <- m;
+	r <- 1;
+	if a ->
+        print 1;
+    otherwise ->
+        print 0;
+    end
+
 end

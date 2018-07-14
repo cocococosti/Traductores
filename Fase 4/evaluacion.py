@@ -1,50 +1,121 @@
 import sys
+from collections import deque
+from contexto import *
 
 class evaluacion():
+	# Usamos tabla de simbolos para obtener las variables del programa
 	def __init__(self, tablaSim):
 		self.tabla = tablaSim
 		
 		
 	def evalArbol(self,ast):
+
 		if (ast):
 				if (len(ast.hijos) > 0): 
-
 					for nodo in ast.hijos:
+
 						if (nodo.tipo == 'ASIGNACION'):
 							var = nodo.valor
 							value = self.evalExp(nodo.hijos[0])
+
 							if (isinstance(var, str)):
 								self.setValor(var, value)
 							else:
 								indice = self.evalExp(var.hijos[0])
 								self.setValor(var.valor, value, indice)
 
-								
+
 
 						elif (nodo.tipo == 'VARIABLE'):
 							for i in nodo.hijos:
 								if (i.tipo == 'EXPRESION'):
 									var = nodo.valor
-
 									value = self.evalExp(i)
 									self.setValor(var, value)
+								else:
+									self.evalArbol(nodo)
 
 						elif (nodo.tipo == 'DECLARACION'):
-							for i in nodo.hijos:
-
-								self.evalArbol(i)
+							
+							self.evalArbol(nodo)
 
 						elif (nodo.tipo == 'SALIDA'):
 							val = self.evalExp(nodo.hijos[0])
+
 							print(val)
 
 						elif (nodo.tipo == 'ENTRADA'):
 							val = input()
 							var = nodo.valor
+							if (val.isdigit()):
+								val = int(val)
+							if (val == 'false'):
+								val = False
+							elif (val == 'true'):
+								val = True
+							for i in self.tabla:
+								if var in i:
+									t = i[var].tipo
+									if (isinstance(val,str) and t!='char'):
+										print("Error. Tipo incorrecto")
+										sys.exit(0)
+									elif(isinstance(val,bool) and t!='bool'):
+										print("Error. Tipo incorrecto")
+										sys.exit(0)
+									elif(isinstance(val, int) and t!= 'int'):
+										print("Error. Tipo incorrecto")
+										sys.exit(0)
+							self.setValor(var, val)
 
 							# chequear que la entrada del user sea del tipo correcto (int, bool, char)
 							# arreglar contexto, debe chequear que la var a leer este declarada!
-							
+						elif (nodo.tipo == 'CONDICIONAL'):
+							guardia = self.evalExp(nodo.hijos[0])
+							cuerpo = nodo.hijos[1]
+							if (guardia):
+								self.evalArbol(cuerpo)
+							else:
+
+								if (len(nodo.hijos)==3):
+									other = nodo.hijos[2]
+									self.evalArbol(other)
+						elif (nodo.tipo == 'ITERACION DETERMINADA'):
+							val = self.getValor(nodo.valor[0],None,True)
+							contador = simbolo(self.getValor(nodo.valor[0],None,True),'int')
+							self.tabla.insert(0,{})
+							self.tabla[0][nodo.valor[0]]=contador
+							liminf = self.evalExp(nodo.valor[1])
+							self.setValor(nodo.valor[0], liminf)
+							limsup = self.evalExp(nodo.valor[2])
+							step = nodo.valor[3]
+
+							if (isinstance(step,str)):
+								step = int(step)
+							else:
+								step = self.evalExp(step)
+							if (step == 0):
+								print("Error. El paso en la iteracion determinada no puede ser 0.")
+								sys.exit(0)
+							# step distinta de 0 !
+							for i in range(liminf, limsup, step):
+								self.setValor(nodo.valor[0], i)
+								self.evalArbol(nodo.hijos[0])
+							self.setValor(nodo.valor[0], val)
+							self.tabla.pop(0)
+						
+									
+									
+						elif (nodo.tipo == 'ITERACION INDETERMINADA'):
+							exp = self.evalExp(nodo.valor)
+							while (exp):
+								self.evalArbol(nodo.hijos[0])
+								comprobarexp = self.evalExp(nodo.valor)
+								if (comprobarexp):
+									continue
+								else:
+									break
+
+
 						else:
 							self.evalArbol(nodo)
 
@@ -158,23 +229,47 @@ class evaluacion():
 
 		elif (exp.tipo == 'OPERACION ARREGLO'):
 			if (len(exp.hijos)==2):
-				op1 = self.evalExp(exp.hijos[0])
-				op2 = self.evalExp(exp.hijos[1])
-				res = op1.extend(op2)
+
+				op1 = self.getValor(exp.hijos[0])
+				op2 = self.getValor(exp.hijos[1])
+				res = op1+op2
 				return res
 			else:
-				op = self.evalExp(exp.hijos[0])
-
+				op = self.getValor(exp.hijos[0])
+				temp = []
+				temp.append(op[len(op)-1])
+				for i in range(len(op)-1):
+					temp.append(op[i])
+				return temp
 
 		return t
+
+	def isArray(self, var):
+		if (isinstance(var, str) and len(var)==1):
+			if (len(self.tabla) > 0):
+
+				for i in range(len(self.tabla)):
+					if var in self.tabla[i]:
+						if (self.tabla[i][var].arreglo):
+							return True
+		return False
 
 	def setValor(self, var, val, index=None):
 		if (len(self.tabla) > 0):
 
 			for i in range(len(self.tabla)):
 				if var in self.tabla[i]:
-					if (index):
-						if (index > self.evalExp(self.tabla[i][var].size)):
+
+					# Chequeamos si se estan asignando arreglos
+					if (self.tabla[i][var].arreglo and not self.isArray(val) and index==None):
+						print("Error. No se puede asignar un arreglo.")
+						sys.exit(0)
+					elif (not self.tabla[i][var].arreglo and self.isArray(val)):
+						print("Error. No se puede asignar un arreglo.")
+						sys.exit(0)
+
+					if (index!=None):
+						if (index >= self.evalExp(self.tabla[i][var].size)):
 							print("Error. Indice excede tamaño del arreglo.")
 							sys.exit(0)
 						elif (index < 0):
@@ -182,6 +277,7 @@ class evaluacion():
 							sys.exit(0)
 						else:
 							if (len(self.tabla[i][var].res)==0):
+
 								for n in range(self.evalExp(self.tabla[i][var].size)):
 									self.tabla[i][var].res.append(None)
 
@@ -190,28 +286,44 @@ class evaluacion():
 									print("Error. No se puede asignar arreglo a entero.")
 									sys.exit(0)
 							self.tabla[i][var].res[index] = val
+
 					else:
 						if (isinstance(val, list)):
 							if (not self.tabla[i][var].arreglo):
-								print("Error. No se puede asignar arreglo a entero.")
+								print("Error. No se puede asignar arreglo a variable que no es arreglo.")
 								sys.exit(0)
+							if (len(val) > self.evalExp(self.tabla[i][var].size)):
+								print("Error. Arreglo excede el tamaño de la variable.")
+								sys.exit(0)
+
+
 						self.tabla[i][var].res = val
 
-	def getValor(self, var, index=None):
+	def getValor(self, var, index=None, itera=None):
+		# Valor a buscar
 		val = None
+		# Recorremos tabla
 		if (len(self.tabla) > 0):
-
 			for i in range(len(self.tabla)):
+				# Si encontramos variable en la tabla
 				if var in self.tabla[i]:
-					if (index):
+					# Si estamos buscando indice
+					if (index!=None):
+						# Si la variable es un arreglo
 						if (self.tabla[i][var].arreglo):
+							# Indice negativo reporta error
 							if (index < 0):
 								print("Error. Indice no puede ser negativo.")
 								sys.exit(0)
+							# Indice mayor que el tamaño del arreglo reporta error
+							elif (index >= self.evalExp(self.tabla[i][var].size)):
+								print("Error. Indice excede tamaño del arreglo.")
+								sys.exit(0)
+							# Si la variable esta inicializada
+							if (self.tabla[i][var].res!=None):
+								if (len(self.tabla[i][var].res)!=0):
 
-							if (len(self.tabla[i][var].res)!=0):
-
-								val = self.tabla[i][var].res[index]
+									val = self.tabla[i][var].res[index]
 						else:
 							print("Error. Variable no es un arreglo.")
 							sys.exit(0)
@@ -221,9 +333,18 @@ class evaluacion():
 
 		if (val != None):
 			return val
+		elif (val==None and index!=None):
+			return val
+		elif(itera!=None):
+			return val
 		else:
-			print("Error. Variable " + var + " no inicializada.")
-			sys.exit(0)
+			if (index != None):
+
+				print("Error. Variable " + var + "[" + str(index) +"] no inicializada.")
+				sys.exit(0)
+			else:
+				print("Error. Variable " + var + " no inicializada.")
+				sys.exit(0)
 
 
 

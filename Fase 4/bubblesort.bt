@@ -1,0 +1,30 @@
+with
+    var a : array [6] of int
+    var temp : int
+    var b: bool
+begin
+    b <- true;
+    a[0] <- 323;
+    a[1] <- -56;
+    a[2] <- 1;
+    a[3] <- 9;
+    a[4] <- 37;
+    a[5] <- 12;
+
+    for i from 0 to 4 ->
+        for j from 0 to 4 - i ->
+            if a[j] > a[j+1] ->
+                temp <- a[j+1];
+                a[j+1] <- a[j];
+                a[j] <- temp;
+            end
+        end
+    end
+
+    read temp;
+    while b ->
+        print 2;
+        b <- false;
+    end
+
+end

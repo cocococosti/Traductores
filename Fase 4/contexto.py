@@ -48,7 +48,7 @@ class context:
 						else:
 							var = self.getTipoId(nodo.valor)
 							# chequear si el hijo tambien es un arreglo
-							
+						
 
 						# Si la var es de un arreglo chequear que el indice es de tipo entero
 						tpe = self.checkExp(nodo.hijos[0])
@@ -82,28 +82,6 @@ class context:
 							print("Error linea " + str(self.linea) + ". Las variables en la guardia son de tipo incorrecto.")
 							sys.exit(0)
 
-						# hijo = nodo.valor
-						# op1 = hijo.hijos[0]
-						# op2 = hijo.hijos[1]
-
-						# tipo1 = self.checkExp(op1)
-						# tipo2 = self.checkExp(op2)
-
-						# if (hijo.valor != '/=' and hijo.valor != '='):
-						# 	if (tipo1 != 'int' or tipo2 != 'int'):
-						# 		print("Error linea " + str(self.linea) + ". Las variables son de tipo incorrecto.")
-						# 		sys.exit(0)
-
-
-						# if (tipo1 != tipo2):
-						# 	print("Error linea " + str(self.linea) + ". Las variables son de tipo incorrecto.")
-						# 	sys.exit(0)
-						# else:
-						# 	t = 'bool'
-						
-						# if (t != 'bool'):
-						# 	print("Error linea " + str(self.linea) + ". Las variables son de tipo incorrecto.")
-						# 	sys.exit(0)
 						
 						self.contextCheck(nodo.hijos[0])
 
@@ -275,7 +253,8 @@ class context:
 
 			elif (k.tipo == 'VARIABLE'):
 				self.agregarSimbolo(k, tipo, arreglo, tam)
-				
+	
+
 	def getTipo(self, arr):
 		# Recorremos los hijos del arreglo
 		# (pues puede ser un arreglo de arreglos)
@@ -306,7 +285,7 @@ class context:
 		if ((len(var.hijos))>0):
 			for i in var.hijos:
 				if (i.tipo == 'VARIABLE'):
-					self.agregarSimbolo(i, tipo, arr)
+					self.agregarSimbolo(i, tipo, arr, tam)
 				elif (i.tipo == 'EXPRESION'):
 					t = self.checkExp(i)
 					if (t != tipo):
