@@ -724,10 +724,10 @@ def main():
 
 	c = context()
 	c.contextCheck(p)
-	#c.imprimirTabla()
-	#print("SECUENCIACION")
-	#s = "\t"
-	#imprimirArbol(p, s)
+	c.imprimirTabla()
+	print("SECUENCIACION")
+	s = "\t"
+	imprimirArbol(p, s)
 	e = evaluacion(c.scopes)
 	e.evalArbol(p)
 

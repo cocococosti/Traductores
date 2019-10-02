@@ -21,7 +21,6 @@ begin
         end
     end
 
-    read temp;
     while b ->
         print 2;
         b <- false;
